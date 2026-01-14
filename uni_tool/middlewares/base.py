@@ -6,19 +6,15 @@ Implements the "Onion Model" middleware pattern.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Awaitable, Protocol, Optional, TYPE_CHECKING
+from typing import Any, Protocol, TYPE_CHECKING
 import logging
 
-from uni_tool.core.models import ToolCall, MiddlewareObj, ToolExpression
+from uni_tool.core.models import ToolCall, MiddlewareObj, ToolExpression, NextHandler
 
 if TYPE_CHECKING:
     from uni_tool.core.models import ToolMetadata
 
 logger = logging.getLogger(__name__)
-
-# Type aliases for middleware signatures
-NextHandler = Callable[[ToolCall], Awaitable[Any]]
-MiddlewareFunc = Callable[[ToolCall, NextHandler], Awaitable[Any]]
 
 
 class MiddlewareProtocol(Protocol):
@@ -124,15 +120,10 @@ def filter_middlewares_for_tool(
     Returns:
         List of middlewares that match the tool.
     """
-    result = []
-    for mw in middlewares:
-        if mw.scope is None:
-            # Global middleware: always applies
-            result.append(mw)
-        elif mw.scope.matches(metadata):
-            # Scoped middleware: check expression
-            result.append(mw)
-    return result
+    return [
+        mw for mw in middlewares
+        if mw.scope is None or mw.scope.matches(metadata)
+    ]
 
 
 def deduplicate_middlewares(

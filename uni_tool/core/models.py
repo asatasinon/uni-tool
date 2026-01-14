@@ -6,9 +6,8 @@ Defines ToolMetadata, ToolCall, ToolResult, and MiddlewareObj.
 
 from __future__ import annotations
 
-import re
 from typing import Any, Callable, Awaitable, Set, Dict, List, Optional, Type
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class ToolMetadata(BaseModel):
@@ -36,16 +35,6 @@ class ToolMetadata(BaseModel):
     middlewares: List["MiddlewareObj"] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        """Validate tool name format."""
-        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError(
-                f"Invalid tool name '{v}': must contain only alphanumeric characters, underscores, and hyphens"
-            )
-        return v
 
 
 class ToolCall(BaseModel):
@@ -112,10 +101,9 @@ class MiddlewareObj(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    def __init__(self, **data: Any):
-        super().__init__(**data)
+    def model_post_init(self, __context: Any) -> None:
+        """Generate uid from function name if not provided."""
         if not self.uid:
-            # Generate uid from function name if not provided
             func_name = getattr(self.func, "__name__", "anonymous")
             object.__setattr__(self, "uid", f"mw_{func_name}_{id(self.func)}")
 

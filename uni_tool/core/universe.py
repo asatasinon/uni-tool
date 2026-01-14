@@ -16,7 +16,6 @@ from typing import (
     TYPE_CHECKING,
     overload,
 )
-import asyncio
 
 from uni_tool.core.models import (
     ToolMetadata,

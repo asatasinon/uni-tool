@@ -6,9 +6,7 @@ This module implements the main decorator for tool registration.
 
 from __future__ import annotations
 
-import asyncio
 import inspect
-from functools import wraps
 from typing import Any, Callable, List, Optional, Set, TYPE_CHECKING
 
 from uni_tool.core.models import ToolMetadata, MiddlewareObj
@@ -40,42 +38,28 @@ def create_tool_decorator(
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        # Determine the tool name
         tool_name = name or func.__name__
-
-        # Extract description from docstring
         description = extract_description(func)
-
-        # Check if function is async
-        is_async = asyncio.iscoroutinefunction(func)
 
         # Create parameters model and get injected params
         parameters_model, injected_params = create_parameters_model(func, tool_name)
 
-        # Create metadata
+        # Create and register metadata
         metadata = ToolMetadata(
             name=tool_name,
             description=description,
             func=func,
-            is_async=is_async,
+            is_async=inspect.iscoroutinefunction(func),
             parameters_model=parameters_model,
             injected_params=injected_params,
             tags=tags or set(),
             middlewares=middlewares or [],
         )
-
-        # Register with universe
         universe.register(metadata)
 
-        # Return the original function unchanged
-        # The wrapper is not needed as execution goes through dispatch
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return func(*args, **kwargs)
+        # Attach metadata to original function for introspection
+        func._tool_metadata = metadata  # type: ignore
 
-        # Attach metadata to wrapper for introspection
-        wrapper._tool_metadata = metadata  # type: ignore
-
-        return wrapper
+        return func
 
     return decorator

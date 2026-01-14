@@ -6,9 +6,8 @@ This module implements the class decorator for bulk tool registration.
 
 from __future__ import annotations
 
-import asyncio
 import inspect
-from typing import Any, Callable, Optional, Set, TYPE_CHECKING
+from typing import Callable, Optional, Set, TYPE_CHECKING
 
 from uni_tool.core.models import ToolMetadata
 from uni_tool.utils.docstring import extract_description
@@ -40,57 +39,37 @@ def create_bind_decorator(
     """
 
     def decorator(cls: type) -> type:
-        # Create an instance to bind methods
         instance = cls()
 
-        # Iterate over all methods
         for method_name in dir(instance):
-            # Skip private and magic methods
             if method_name.startswith("_"):
                 continue
 
             method = getattr(instance, method_name)
 
-            # Skip non-callables
-            if not callable(method):
+            # Skip non-callables and non-bound methods
+            if not callable(method) or not inspect.ismethod(method):
                 continue
 
-            # Skip class/static methods that aren't bound
-            if not inspect.ismethod(method):
-                continue
-
-            # Build tool name
             tool_name = f"{prefix}{method_name}" if prefix else method_name
-
-            # Extract description
-            description = extract_description(method)
-
-            # Check if async
-            is_async = asyncio.iscoroutinefunction(method)
-
-            # Create parameters model
             parameters_model, injected_params = create_parameters_model(
                 method, tool_name
             )
 
-            # Create metadata
             metadata = ToolMetadata(
                 name=tool_name,
-                description=description,
+                description=extract_description(method),
                 func=method,
-                is_async=is_async,
+                is_async=inspect.iscoroutinefunction(method),
                 parameters_model=parameters_model,
                 injected_params=injected_params,
                 tags=tags or set(),
                 middlewares=[],
             )
-
-            # Register with universe
             universe.register(metadata)
 
         # Store reference to instance for lifecycle management
         cls._bound_instance = instance  # type: ignore
-
         return cls
 
     return decorator

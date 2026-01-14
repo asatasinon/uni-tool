@@ -58,7 +58,8 @@ from uni_tool.drivers.base import BaseDriver
 from uni_tool.drivers.openai import OpenAIDriver
 
 # Middlewares
-from uni_tool.middlewares.base import MiddlewareProtocol, NextHandler
+from uni_tool.middlewares.base import MiddlewareProtocol
+from uni_tool.core.models import NextHandler
 from uni_tool.middlewares.audit import AuditMiddleware, create_audit_middleware
 from uni_tool.middlewares.monitor import MonitorMiddleware, create_monitor_middleware
 from uni_tool.middlewares.logging import LoggingMiddleware, create_logging_middleware
