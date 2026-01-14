@@ -34,3 +34,21 @@ uv run main.py
 # 运行测试
 uv run pytest
 ```
+
+## 开发指南
+
+详细开发准则请参考 `CLAUDE.md` 和 `.specify/memory/constitution.md`。
+
+### 核心工作流
+
+1.  **工具表达式开发 (Tool Expression)**:
+    *   专注于 `uni_tool/core/execution.py` 和相关逻辑。
+    *   使用 `uv run pytest tests/unit/test_expression.py` 验证更改。
+
+2.  **中间件开发 (Middleware)**:
+    *   在 `uni_tool/middlewares/` 中实现新的中间件。
+    *   确保遵循**纵深防御**和**上下文隔离**原则。
+    *   使用 `uv run pytest tests/unit/test_middleware.py` 验证更改。
+
+3.  **规范驱动开发**:
+    *   使用 `/speckit` 系列命令进行功能开发。

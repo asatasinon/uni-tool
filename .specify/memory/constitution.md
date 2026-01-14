@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report:
-- Version: 0.1.0 -> 0.2.0
-- Principles Initialized:
-  - Protocol Agnosticism
-  - Defense in Depth
-  - Context Isolation via Dependency Injection
-  - Middleware-Based Governance
-- Sections Added: Package Management (in Technical Standards)
-- Templates Status: ✅ Verified (Generic templates align with new constitution)
+- Version: 0.2.0 -> 0.2.1
+- Principles Refined:
+  - Technical Standards (Explicit reference to CLAUDE.md for commands)
+  - Development Workflow (Added Workflow Automation)
+- Sections Updated:
+  - Technical Standards
+  - Development Workflow
+- Templates Status: ✅ Verified
 -->
 
 # UniTools SDK 项目章程
@@ -33,12 +33,14 @@ Sync Impact Report:
 *   **数据验证**: 必须使用 Pydantic 进行所有数据模型定义和运行时参数校验。
 *   **类型安全**: 要求核心库具有 100% 的类型提示（Type Hinting）覆盖率。
 *   **包管理**: 必须使用 `uv` 进行依赖管理和虚拟环境管理。禁止使用 `pip` 直接安装全局包。
+*   **开发命令**: 必须遵循 `CLAUDE.md` 中定义的标准命令进行开发、测试和发布。
 *   **风格**: 遵循 PEP 8 规范，使用现代 Python 特性。
 
 ## 开发工作流
 
 *   **规范驱动 (Spec-Driven)**: 所有新功能 **必须** 遵循 `/speckit` 工作流（Init -> Spec -> Plan -> Tasks -> Impl）。
 *   **测试驱动 (Test-Driven)**: 核心逻辑必须有单元测试覆盖。新的 Driver 实现必须通过契约测试。
+*   **工作流自动化 (Workflow Automation)**: 开发过程中必须利用 `CLAUDE.md` 提供的自动化命令（如 `test-expression`, `test-middleware`）来确保验证的一致性。
 *   **文档**: 公共 API 必须包含清晰的文档字符串（Docstrings）。
 
 ## 治理
@@ -49,4 +51,4 @@ Sync Impact Report:
 *   **驱动兼容性**: 新引入的 Driver 必须证明与标准工具定义的兼容性达到 90% 以上。
 *   **合规性**: 所有 PR 必须在合并前验证是否符合本章程规定的原则。
 
-**版本**: 0.2.0 | **批准日期**: 2026-01-14 | **最后修正**: 2026-01-14
+**版本**: 0.2.1 | **批准日期**: 2026-01-14 | **最后修正**: 2026-01-14
