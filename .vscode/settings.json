@@ -1,0 +1,56 @@
+{
+  //=====================================================================
+  // 1. 通用编辑器配置 (General Editor Settings)
+  //=====================================================================
+  // 字符长度限制
+  "editor.rulers": [120],
+  // 制表符大小
+  "editor.tabSize": 4,
+  // 插入空格
+  "editor.insertSpaces": true,
+  // Python 默认解释器路径
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  // 字体
+  "editor.fontFamily": "Maple Mono NF CN, Menlo, Consolas, Maple UI, PingFang, 'Microsoft YaHei', monospace",
+  // 字体权重
+  "editor.fontWeight": "400",
+  // 字符间距
+  "editor.letterSpacing": 0.1,
+  // 行高
+  "editor.lineHeight": 1.8,
+
+  //=====================================================================
+  // 2. Cursor 配置 (Cursor Settings)
+  //=====================================================================
+  // 类型检查模式: basic 表示基本类型检查. 可选: off, basic, standard, strict
+  "cursorpyright.analysis.typeCheckingMode": "basic",
+  // 诊断模式: openFilesOnly 表示仅在打开的文件中进行诊断. 可选: openFilesOnly, workspace
+  "cursorpyright.analysis.diagnosticMode": "openFilesOnly",
+  // 自动导入补全
+  "cursorpyright.analysis.autoImportCompletions": true,
+  // 自动格式化字符串
+  "cursorpyright.analysis.autoFormatStrings": true,
+  // 变量类型提示
+  "cursorpyright.analysis.inlayHints.variableTypes": true,
+  // 函数返回类型提示
+  "cursorpyright.analysis.inlayHints.functionReturnTypes": true,
+  // 调用参数提示
+  "cursorpyright.analysis.inlayHints.callArgumentNames": true,
+
+  //=====================================================================
+  // 3. Python 配置 (Python Settings)
+  //=====================================================================
+  "[python]": {
+    // 保存时自动格式化
+    "editor.formatOnSave": true,
+    // 保存时执行的代码操作
+    "editor.codeActionsOnSave": {
+      // 自动修复所有问题: explicit 表示手动保存时执行
+      "source.fixAll": "explicit",
+      // 自动整理导入: explicit 表示手动保存时执行
+      "source.organizeImports": "explicit"
+    },
+    // 默认格式化器: Ruff
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  }
+}
