@@ -12,7 +12,7 @@ import pytest
 from typing import Annotated
 
 from uni_tool.core.universe import Universe
-from uni_tool.core.models import ToolCall, ToolResult
+from uni_tool.core.models import ToolCall
 from uni_tool.core.execution import execute_single_tool, execute_tool_calls
 from uni_tool.drivers.openai import OpenAIDriver
 from uni_tool.utils.injection import Injected

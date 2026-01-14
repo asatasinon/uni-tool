@@ -1,0 +1,16 @@
+repos:
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.14.11
+  hooks:
+    # Run the linter.
+    # 只检测, 不修复.
+    # 如果需要修复,则需要放开 args 的注释
+    # 如果 check 使用 `--fix` 参数,则需要保证check在format之前.
+    # fix 只会修复简单的可修复的.如: import了但没使用
+    - id: ruff-check
+      types_or: [ python, pyi ]
+      args: [ --fix --fix-only ]
+    # Run the formatter.
+    - id: ruff-format
+      types_or: [ python, pyi ]

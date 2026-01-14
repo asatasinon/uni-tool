@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Protocol, TYPE_CHECKING
 import logging
 
-from uni_tool.core.models import ToolCall, MiddlewareObj, ToolExpression, NextHandler
+from uni_tool.core.models import ToolCall, MiddlewareObj, NextHandler
 
 if TYPE_CHECKING:
     from uni_tool.core.models import ToolMetadata

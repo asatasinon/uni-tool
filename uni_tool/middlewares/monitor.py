@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from typing import Any, Callable, Dict, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import defaultdict
 
 from uni_tool.core.models import ToolCall, MiddlewareObj

@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import Any, List, TYPE_CHECKING
 
 from uni_tool.core.models import ToolCall, ToolResult, MiddlewareObj
 from uni_tool.core.errors import (
     ToolNotFoundError,
-    ToolExecutionError,
     MissingContextKeyError,
 )
 from uni_tool.utils.injection import inject_context_values

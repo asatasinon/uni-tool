@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Protocol
+from typing import Any, List
 from pydantic import BaseModel
 
 class ToolMetadata(BaseModel):

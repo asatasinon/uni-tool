@@ -8,16 +8,11 @@ Tests cover:
 - Combined expressions
 """
 
-import pytest
 
 from uni_tool.core.models import (
     ToolMetadata,
-    ToolExpression,
     Tag,
     Prefix,
-    And,
-    Or,
-    Not,
 )
 
 

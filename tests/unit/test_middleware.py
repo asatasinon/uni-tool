@@ -15,9 +15,7 @@ from uni_tool.core.universe import Universe
 from uni_tool.core.models import ToolCall, MiddlewareObj, Tag
 from uni_tool.core.execution import execute_single_tool
 from uni_tool.middlewares.base import (
-    build_middleware_chain,
     deduplicate_middlewares,
-    filter_middlewares_for_tool,
 )
 from uni_tool.middlewares.audit import AuditMiddleware, create_audit_middleware
 from uni_tool.drivers.openai import OpenAIDriver

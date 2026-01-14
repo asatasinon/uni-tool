@@ -13,6 +13,7 @@ async def main():
 
     # 渲染工具给 LLM
     schema = universe[Tag("finance")].render("gpt-4o")
+    print(schema)
 
     # 执行 LLM 返回的调用
     results = await universe.dispatch(

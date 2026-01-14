@@ -10,9 +10,8 @@ Tests cover:
 
 import pytest
 import json
-from typing import Optional
 
-from uni_tool.core.models import ToolMetadata, ToolCall
+from uni_tool.core.models import ToolMetadata
 from uni_tool.drivers.openai import OpenAIDriver
 from uni_tool.core.errors import UnsupportedResponseFormatError
 from pydantic import BaseModel, create_model
