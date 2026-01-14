@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report:
-- Version: Initial -> 0.1.0
+- Version: 0.1.0 -> 0.2.0
 - Principles Initialized:
   - Protocol Agnosticism
   - Defense in Depth
   - Context Isolation via Dependency Injection
   - Middleware-Based Governance
-- Sections Added: Technical Standards, Development Workflow
+- Sections Added: Package Management (in Technical Standards)
 - Templates Status: ✅ Verified (Generic templates align with new constitution)
 -->
 
@@ -32,6 +32,7 @@ Sync Impact Report:
 *   **核心框架**: 必须使用 AsyncIO 处理所有 I/O 密集型操作。
 *   **数据验证**: 必须使用 Pydantic 进行所有数据模型定义和运行时参数校验。
 *   **类型安全**: 要求核心库具有 100% 的类型提示（Type Hinting）覆盖率。
+*   **包管理**: 必须使用 `uv` 进行依赖管理和虚拟环境管理。禁止使用 `pip` 直接安装全局包。
 *   **风格**: 遵循 PEP 8 规范，使用现代 Python 特性。
 
 ## 开发工作流
@@ -48,4 +49,4 @@ Sync Impact Report:
 *   **驱动兼容性**: 新引入的 Driver 必须证明与标准工具定义的兼容性达到 90% 以上。
 *   **合规性**: 所有 PR 必须在合并前验证是否符合本章程规定的原则。
 
-**版本**: 0.1.0 | **批准日期**: 2026-01-14 | **最后修正**: 2026-01-14
+**版本**: 0.2.0 | **批准日期**: 2026-01-14 | **最后修正**: 2026-01-14
