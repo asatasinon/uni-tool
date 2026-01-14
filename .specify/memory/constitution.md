@@ -1,50 +1,51 @@
-# [PROJECT_NAME] 项目章程
-<!-- 示例: Spec 章程, TaskFlow 章程等 -->
+<!--
+Sync Impact Report:
+- Version: Initial -> 0.1.0
+- Principles Initialized:
+  - Protocol Agnosticism
+  - Defense in Depth
+  - Context Isolation via Dependency Injection
+  - Middleware-Based Governance
+- Sections Added: Technical Standards, Development Workflow
+- Templates Status: ✅ Verified (Generic templates align with new constitution)
+-->
+
+# UniTools SDK 项目章程
 
 ## 核心原则
 
-### [PRINCIPLE_1_NAME]
-<!-- 示例: I. 库优先 -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- 示例: 每个功能都从独立的库开始; 库必须是自包含的、可独立测试的、有文档的; 需要明确的目的 - 不允许仅用于组织的库 -->
+### I. 协议无关性 (Protocol Agnosticism)
+核心逻辑 **必须** 与任何特定 LLM 提供商的协议（如 OpenAI, Anthropic）解耦。所有协议特定的转换 **必须** 发生在驱动层（Driver Layer）。Universe 作为统一的控制平面，不应包含特定模型的硬编码逻辑。
 
-### [PRINCIPLE_2_NAME]
-<!-- 示例: II. CLI 接口 -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- 示例: 每个库都通过 CLI 暴露功能; 文本输入/输出协议: stdin/args → stdout, 错误 → stderr; 支持 JSON + 人类可读格式 -->
+### II. 纵深防御 (Defense in Depth)
+执行 **必须** 通过多层防御系统：Query 用于工具筛选，Filter 用于权限验证，Middleware 用于运行时隔离。严禁绕过这些安全层直接执行工具。
 
-### [PRINCIPLE_3_NAME]
-<!-- 示例: III. 测试优先(不可协商) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- 示例: TDD 强制要求: 编写测试 → 用户批准 → 测试失败 → 然后实现; 严格执行红-绿-重构循环 -->
+### III. 通过依赖注入实现上下文隔离 (Context Isolation via Dependency Injection)
+敏感上下文（如用户 ID、Token）**必须** 在运行时使用 `Injected` 模式注入。工具 **必须** 避免将敏感数据作为直接参数暴露给 LLM。LLM 仅应感知业务参数。
 
-### [PRINCIPLE_4_NAME]
-<!-- 示例: IV. 集成测试 -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- 示例: 需要集成测试的重点领域: 新库契约测试、契约变更、服务间通信、共享模式 -->
+### IV. 基于中间件的治理 (Middleware-Based Governance)
+横切关注点（日志、认证、限流等）**必须** 实现为独立的中间件（Middlewares）。核心业务逻辑 **必须** 保持纯净，不包含治理逻辑。支持全局、作用域和工具级中间件。
 
-### [PRINCIPLE_5_NAME]
-<!-- 示例: V. 可观测性, VI. 版本控制和破坏性变更, VII. 简单性 -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- 示例: 文本 I/O 确保可调试性; 需要结构化日志; 或者: MAJOR.MINOR.BUILD 格式; 或者: 从简单开始, YAGNI 原则 -->
+## 技术标准
 
-## [SECTION_2_NAME]
-<!-- 示例: 附加约束、安全要求、性能标准等 -->
+*   **语言版本**: Python 3.13+
+*   **核心框架**: 必须使用 AsyncIO 处理所有 I/O 密集型操作。
+*   **数据验证**: 必须使用 Pydantic 进行所有数据模型定义和运行时参数校验。
+*   **类型安全**: 要求核心库具有 100% 的类型提示（Type Hinting）覆盖率。
+*   **风格**: 遵循 PEP 8 规范，使用现代 Python 特性。
 
-[SECTION_2_CONTENT]
-<!-- 示例: 技术栈要求、合规标准、部署策略等 -->
+## 开发工作流
 
-## [SECTION_3_NAME]
-<!-- 示例: 开发工作流程、审查流程、质量门禁等 -->
-
-[SECTION_3_CONTENT]
-<!-- 示例: 代码审查要求、测试门禁、部署审批流程等 -->
+*   **规范驱动 (Spec-Driven)**: 所有新功能 **必须** 遵循 `/speckit` 工作流（Init -> Spec -> Plan -> Tasks -> Impl）。
+*   **测试驱动 (Test-Driven)**: 核心逻辑必须有单元测试覆盖。新的 Driver 实现必须通过契约测试。
+*   **文档**: 公共 API 必须包含清晰的文档字符串（Docstrings）。
 
 ## 治理
-<!-- 示例: 章程优先于所有其他实践; 修正需要文档化、批准、迁移计划 -->
 
-[GOVERNANCE_RULES]
-<!-- 示例: 所有 PR/审查必须验证合规性; 复杂性必须得到证明; 使用 [GUIDANCE_FILE] 进行运行时开发指导 -->
+此章程优先于所有其他实践指南。
 
-**版本**: [CONSTITUTION_VERSION] | **批准日期**: [RATIFICATION_DATE] | **最后修正**: [LAST_AMENDED_DATE]
-<!-- 示例: 版本: 2.1.1 | 批准日期: 2025-06-13 | 最后修正: 2025-07-16 -->
+*   **架构变更**: 对 `Universe` 核心类或 `Driver` 抽象基类的修改需要经过详细的设计审查（Design Review）。
+*   **驱动兼容性**: 新引入的 Driver 必须证明与标准工具定义的兼容性达到 90% 以上。
+*   **合规性**: 所有 PR 必须在合并前验证是否符合本章程规定的原则。
+
+**版本**: 0.1.0 | **批准日期**: 2026-01-14 | **最后修正**: 2026-01-14
