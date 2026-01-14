@@ -10,7 +10,7 @@ repos:
     # fix 只会修复简单的可修复的.如: import了但没使用
     - id: ruff-check
       types_or: [ python, pyi ]
-      args: [ --fix --fix-only ]
+      args: [ --fix ]
     # Run the formatter.
     - id: ruff-format
       types_or: [ python, pyi ]
