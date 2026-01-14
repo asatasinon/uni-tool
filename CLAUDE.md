@@ -1,6 +1,7 @@
 # Development Guide
 
-**uv** is used for package management.
+## Package Management
+**`uv` is used for package management.**
 
 ```sh
 # install package
@@ -13,3 +14,5 @@ source .venv/bin/activate
 uv run <script>
 ```
 
+## Technical Context
+**before plan or implement, need to use `context7 mcp tools` to get latest technical context.**
