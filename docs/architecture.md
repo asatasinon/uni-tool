@@ -79,7 +79,7 @@ class Universe:
     def __getitem__(self, query: Union[str, ToolExpression]) -> 'ToolSet':
         """流式筛选：u[Tag('finance')]"""
         if isinstance(query, str): query = Tag(query)
-        matched_tools = [m for m in self._registry.values() if query.match(m)]
+        matched_tools = [m for m in self._registry.values() if query.matches(m)]
         return ToolSet(matched_tools, self._drivers)
 
     # --- 执行入口 ---
@@ -100,7 +100,7 @@ class Universe:
         for call in tool_calls:
             # 3. 安全过滤 (Filter)
             meta = self._registry.get(call.name)
-            if tool_filter and not tool_filter.match(meta):
+            if tool_filter and not tool_filter.matches(meta):
                 tasks.append(ToolResult.error("Permission Denied"))
                 continue
             
@@ -140,7 +140,7 @@ class ToolMetadata:
 ```python
 class ToolExpression(ABC):
     @abstractmethod
-    def match(self, meta: ToolMetadata) -> bool: pass
+    def matches(self, meta: ToolMetadata) -> bool: pass
 
     # 运算符重载实现组合逻辑
     def __and__(self, other): return AndExpr(self, other)
@@ -148,10 +148,10 @@ class ToolExpression(ABC):
     def __invert__(self): return NotExpr(self)
 
 class Tag(ToolExpression):
-    def match(self, meta): return self.tag in meta.tags
+    def matches(self, meta): return self.tag in meta.tags
 
 class Prefix(ToolExpression):
-    def match(self, meta): return meta.name.startswith(self.prefix)
+    def matches(self, meta): return meta.name.startswith(self.prefix)
 ```
 
 ### 3.4 `ToolSet` (工具集合与渲染)
@@ -208,7 +208,7 @@ class OpenAIDriver(BaseDriver):
         # 顺序：Global -> Scoped (匹配到的) -> Local (工具自带的)
         candidates = []
         candidates.extend(self._global_middlewares)
-        candidates.extend([mw for scope, mw in self._scoped_middlewares if scope.match(meta)])
+        candidates.extend([mw for scope, mw in self._scoped_middlewares if scope.matches(meta)])
         candidates.extend([MiddlewareObj(m) for m in meta.middlewares])
 
         # 2. 有序去重 (Deduplication)
@@ -217,19 +217,19 @@ class OpenAIDriver(BaseDriver):
 
         # 3. 终端处理器 (Terminal Handler)
         async def terminal_handler(ctx_call):
-            # 依赖注入 (Dependency Injection)
-            # 从 ctx_call.context 中提取数据填入 kwargs
-            real_args = self._inject_dependencies(ctx_call, meta)
-            
             # Pydantic 校验 (Validation)
-            # 若失败抛出 ValidationError，由外层中间件捕获用于 Self-Correction
-            validated_args = meta.parameters_model(**real_args)
+            # 先校验 LLM 提供的参数，若失败抛出 ValidationError，由外层中间件捕获用于 Self-Correction
+            validated_args = meta.parameters_model(**ctx_call.arguments)
+
+            # 依赖注入 (Dependency Injection)
+            # 校验通过后，再从 ctx_call.context 中提取数据填入 kwargs
+            real_args = self._inject_dependencies(ctx_call, meta, validated_args)
             
             # 执行
             if meta.is_async:
-                return await meta.fn(**validated_args.dict())
+                return await meta.fn(**real_args)
             else:
-                return await asyncio.to_thread(meta.fn, **validated_args.dict())
+                return await asyncio.to_thread(meta.fn, **real_args)
 
         # 4. 递归包装 (Wrapping)
         handler = terminal_handler

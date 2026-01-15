@@ -8,11 +8,12 @@
 import asyncio
 import json
 import logging
-from typing import Annotated, List, Dict
-from uni_tool import Universe, Injected
+from typing import Annotated, Dict, List
+
+from uni_tool import Injected, Universe
+from uni_tool.core.execution import execute_tool_calls
 from uni_tool.drivers.openai import OpenAIDriver
 from uni_tool.middlewares.logging import create_logging_middleware
-from uni_tool.core.execution import execute_tool_calls
 
 # Setup
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

@@ -25,9 +25,7 @@ class MissingContextKeyError(UniToolError):
     def __init__(self, key: str, tool_name: str):
         self.key = key
         self.tool_name = tool_name
-        super().__init__(
-            f"Missing required context key '{key}' for tool '{tool_name}'"
-        )
+        super().__init__(f"Missing required context key '{key}' for tool '{tool_name}'")
 
 
 class ToolNotFoundError(UniToolError):
@@ -61,6 +59,4 @@ class MiddlewareError(UniToolError):
     def __init__(self, middleware_name: str, original_error: Exception):
         self.middleware_name = middleware_name
         self.original_error = original_error
-        super().__init__(
-            f"Middleware '{middleware_name}' failed: {original_error}"
-        )
+        super().__init__(f"Middleware '{middleware_name}' failed: {original_error}")

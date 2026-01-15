@@ -2,17 +2,20 @@ from abc import ABC, abstractmethod
 from typing import Any, List
 from pydantic import BaseModel
 
+
 class ToolMetadata(BaseModel):
     # Simplified for contract
     name: str
     description: str
     pass
 
+
 class ToolCall(BaseModel):
     id: str
     name: str
     arguments: dict
     context: dict = {}
+
 
 class BaseDriver(ABC):
     """

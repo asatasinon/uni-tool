@@ -8,7 +8,6 @@ Tests cover:
 - Combined expressions
 """
 
-
 from uni_tool.core.models import (
     ToolMetadata,
     Tag,

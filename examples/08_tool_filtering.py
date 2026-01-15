@@ -11,8 +11,9 @@
 """
 
 import json
+
 from uni_tool import Universe
-from uni_tool.core.models import Tag, Prefix
+from uni_tool.core.models import Prefix, Tag
 from uni_tool.drivers.openai import OpenAIDriver
 
 universe = Universe()

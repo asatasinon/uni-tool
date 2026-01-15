@@ -72,8 +72,7 @@ def wrap_middleware(
                 # Non-critical middleware: log and skip
                 middleware_name = getattr(middleware.func, "__name__", "anonymous")
                 logger.warning(
-                    f"Non-critical middleware '{middleware_name}' failed: {e}. "
-                    "Continuing pipeline execution."
+                    f"Non-critical middleware '{middleware_name}' failed: {e}. Continuing pipeline execution."
                 )
                 return await next_handler(call)
 
@@ -120,10 +119,7 @@ def filter_middlewares_for_tool(
     Returns:
         List of middlewares that match the tool.
     """
-    return [
-        mw for mw in middlewares
-        if mw.scope is None or mw.scope.matches(metadata)
-    ]
+    return [mw for mw in middlewares if mw.scope is None or mw.scope.matches(metadata)]
 
 
 def deduplicate_middlewares(

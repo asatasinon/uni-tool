@@ -52,9 +52,7 @@ def create_bind_decorator(
                 continue
 
             tool_name = f"{prefix}{method_name}" if prefix else method_name
-            parameters_model, injected_params = create_parameters_model(
-                method, tool_name
-            )
+            parameters_model, injected_params = create_parameters_model(method, tool_name)
 
             metadata = ToolMetadata(
                 name=tool_name,

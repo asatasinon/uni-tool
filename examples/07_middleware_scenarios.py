@@ -1,8 +1,9 @@
 import asyncio
 from typing import Any
+
 from uni_tool import Universe
-from uni_tool.core.models import ToolCall, Tag, Prefix
 from uni_tool.core.execution import execute_tool_calls
+from uni_tool.core.models import Prefix, Tag, ToolCall
 
 """
 中间件场景示例 (Middleware Scenarios)

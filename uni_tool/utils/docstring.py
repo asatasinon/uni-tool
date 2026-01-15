@@ -59,11 +59,7 @@ def extract_param_descriptions(func: Callable[..., Any]) -> Dict[str, str]:
         return {}
 
     parsed: Docstring = parse_docstring(docstring)
-    return {
-        param.arg_name: param.description or ""
-        for param in parsed.params
-        if param.arg_name
-    }
+    return {param.arg_name: param.description or "" for param in parsed.params if param.arg_name}
 
 
 def extract_return_description(func: Callable[..., Any]) -> Optional[str]:

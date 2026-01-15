@@ -46,11 +46,7 @@ class UniverseView:
 
     def get_tools(self) -> List[ToolMetadata]:
         """Get all tools matching the expression."""
-        return [
-            meta
-            for meta in self._universe._registry.values()
-            if self._expression.matches(meta)
-        ]
+        return [meta for meta in self._universe._registry.values() if self._expression.matches(meta)]
 
     def render(self, driver_or_model: str) -> Any:
         """Render the filtered tools using the specified driver."""

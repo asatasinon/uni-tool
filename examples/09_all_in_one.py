@@ -33,9 +33,9 @@ import logging
 import time
 from typing import Annotated, Any, Dict
 
-from uni_tool import Universe, Injected
-from uni_tool.core.models import ToolCall, Tag
+from uni_tool import Injected, Universe
 from uni_tool.core.execution import execute_tool_calls
+from uni_tool.core.models import Tag, ToolCall
 from uni_tool.drivers.openai import OpenAIDriver
 
 # --- 0. Setup ---
