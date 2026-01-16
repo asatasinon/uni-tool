@@ -7,9 +7,9 @@ This module implements the class decorator for bulk tool registration.
 from __future__ import annotations
 
 import inspect
-from typing import Callable, Optional, Set, TYPE_CHECKING
+from typing import Callable, List, Optional, Set, TYPE_CHECKING
 
-from uni_tool.core.models import ToolMetadata
+from uni_tool.core.models import ToolMetadata, MiddlewareObj
 from uni_tool.utils.docstring import extract_description
 from uni_tool.utils.injection import create_parameters_model
 
@@ -22,6 +22,8 @@ def create_bind_decorator(
     *,
     prefix: Optional[str] = None,
     tags: Optional[Set[str]] = None,
+    exclude: Optional[List[str]] = None,
+    middlewares: Optional[List[MiddlewareObj]] = None,
 ) -> Callable[[type], type]:
     """
     Create a bind decorator bound to a specific Universe instance.
@@ -33,16 +35,24 @@ def create_bind_decorator(
         universe: The Universe instance to register tools with.
         prefix: Optional prefix for tool names (e.g., "math_" + "add" -> "math_add").
         tags: Optional tags applied to all registered methods.
+        exclude: Optional list of method names to exclude from registration.
+        middlewares: Optional list of middlewares to apply to all registered methods.
 
     Returns:
         A class decorator.
     """
+    exclude_set = set(exclude) if exclude else set()
+    middleware_list = list(middlewares) if middlewares else []
 
     def decorator(cls: type) -> type:
         instance = cls()
 
         for method_name in dir(instance):
             if method_name.startswith("_"):
+                continue
+
+            # Skip excluded methods
+            if method_name in exclude_set:
                 continue
 
             method = getattr(instance, method_name)
@@ -62,7 +72,7 @@ def create_bind_decorator(
                 parameters_model=parameters_model,
                 injected_params=injected_params,
                 tags=tags or set(),
-                middlewares=[],
+                middlewares=middleware_list,
             )
             universe.register(metadata)
 

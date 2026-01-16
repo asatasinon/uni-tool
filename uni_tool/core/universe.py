@@ -7,51 +7,34 @@ This module implements the core registry pattern for UniTools SDK.
 from __future__ import annotations
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
     List,
     Optional,
     Set,
-    TYPE_CHECKING,
     overload,
 )
 
-from uni_tool.core.models import (
-    ToolMetadata,
-    ToolCall,
-    ToolResult,
-    MiddlewareObj,
-    ToolExpression,
-)
 from uni_tool.core.errors import (
     DuplicateToolError,
     ToolNotFoundError,
 )
+from uni_tool.core.models import (
+    MiddlewareObj,
+    ModelProfile,
+    Tag,
+    ToolCall,
+    ToolExpression,
+    ToolFilter,
+    ToolMetadata,
+    ToolResult,
+    ToolSet,
+)
 
 if TYPE_CHECKING:
     from uni_tool.drivers.base import BaseDriver
-
-
-class UniverseView:
-    """
-    A filtered view of the Universe for a specific tool expression.
-
-    This allows chaining operations like `universe[Tag("finance")].render("gpt-4o")`.
-    """
-
-    def __init__(self, universe: "Universe", expression: ToolExpression):
-        self._universe = universe
-        self._expression = expression
-
-    def get_tools(self) -> List[ToolMetadata]:
-        """Get all tools matching the expression."""
-        return [meta for meta in self._universe._registry.values() if self._expression.matches(meta)]
-
-    def render(self, driver_or_model: str) -> Any:
-        """Render the filtered tools using the specified driver."""
-        driver = self._universe._get_driver(driver_or_model)
-        return driver.render(self.get_tools())
 
 
 class Universe:
@@ -94,6 +77,22 @@ class Universe:
             "gpt-4o": "openai",
             "gpt-4o-mini": "openai",
             "gpt-3.5-turbo": "openai",
+            "claude-3-opus": "anthropic",
+            "claude-3-sonnet": "anthropic",
+            "claude-3-haiku": "anthropic",
+            "claude-3.5-sonnet": "anthropic",
+        }
+
+        # Model capability profiles
+        self._model_profiles: Dict[str, ModelProfile] = {
+            "gpt-4": ModelProfile(name="gpt-4", capabilities={"FC_NATIVE"}),
+            "gpt-4o": ModelProfile(name="gpt-4o", capabilities={"FC_NATIVE"}),
+            "gpt-4o-mini": ModelProfile(name="gpt-4o-mini", capabilities={"FC_NATIVE"}),
+            "gpt-3.5-turbo": ModelProfile(name="gpt-3.5-turbo", capabilities={"FC_NATIVE"}),
+            "claude-3-opus": ModelProfile(name="claude-3-opus", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
+            "claude-3-sonnet": ModelProfile(name="claude-3-sonnet", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
+            "claude-3-haiku": ModelProfile(name="claude-3-haiku", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
+            "claude-3.5-sonnet": ModelProfile(name="claude-3.5-sonnet", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
         }
 
     def register(self, metadata: ToolMetadata) -> None:
@@ -164,32 +163,44 @@ class Universe:
         return len(self._registry)
 
     @overload
-    def __getitem__(self, key: str) -> ToolMetadata: ...
+    def __getitem__(self, key: str) -> ToolSet: ...
 
     @overload
-    def __getitem__(self, key: ToolExpression) -> UniverseView: ...
+    def __getitem__(self, key: ToolExpression) -> ToolSet: ...
 
-    def __getitem__(self, key: str | ToolExpression) -> ToolMetadata | UniverseView:
+    def __getitem__(self, key: str | ToolExpression) -> ToolSet:
         """
-        Access tools by name or filter by expression.
+        Filter tools by tag string or expression.
 
         Args:
-            key: Either a tool name (str) or a ToolExpression.
+            key: Either a tag string (str) or a ToolExpression.
+                - str: Treated as Tag filter, returns ToolSet with matching tools
+                - ToolExpression: Returns ToolSet with tools matching the expression
 
         Returns:
-            ToolMetadata if key is a string, UniverseView if key is a ToolExpression.
+            ToolSet containing matching tools (may be empty).
 
-        Raises:
-            ToolNotFoundError: If key is a string and the tool is not found.
+        Note:
+            Use get(name) for accessing a single tool by name.
         """
         if isinstance(key, str):
-            if key not in self._registry:
-                raise ToolNotFoundError(key)
-            return self._registry[key]
+            # String is treated as Tag filter
+            expression = Tag(key)
         elif isinstance(key, ToolExpression):
-            return UniverseView(self, key)
+            expression = key
         else:
             raise TypeError(f"Key must be str or ToolExpression, got {type(key)}")
+
+        # Filter tools by expression
+        matching_tools = [meta for meta in self._registry.values() if expression.matches(meta)]
+
+        return ToolSet(
+            tools=matching_tools,
+            drivers=self._drivers,
+            expression=expression,
+            model_profile_getter=self._get_model_profile,
+            driver_selector=self._select_driver_for_profile,
+        )
 
     def use(
         self,
@@ -254,6 +265,58 @@ class Universe:
 
         raise ValueError(f"No driver found for '{driver_or_model}'")
 
+    def _get_model_profile(self, model_name: str) -> ModelProfile:
+        """
+        Get or create a ModelProfile for the given model name.
+
+        Args:
+            model_name: The model name.
+
+        Returns:
+            The ModelProfile for the model.
+        """
+        if model_name in self._model_profiles:
+            return self._model_profiles[model_name]
+
+        # Create a default profile for unknown models
+        return ModelProfile(name=model_name, capabilities=set())
+
+    def _select_driver_for_profile(self, profile: ModelProfile) -> Optional["BaseDriver"]:
+        """
+        Select the best driver for a given model profile using can_handle scoring.
+
+        Args:
+            profile: The model profile.
+
+        Returns:
+            The best matching driver, or None if no driver can handle it.
+        """
+        if not self._drivers:
+            return None
+
+        scored = [(driver, driver.can_handle(profile)) for driver in self._drivers.values()]
+        best_driver, best_score = max(scored, key=lambda x: x[1])
+
+        return best_driver if best_score > 0 else None
+
+    def _select_driver_for_response(self, response: Any) -> Optional[tuple["BaseDriver", str]]:
+        """
+        Select the best driver for parsing a response using can_handle_response scoring.
+
+        Args:
+            response: The raw LLM response.
+
+        Returns:
+            A tuple of (driver, driver_name), or None if no driver can handle it.
+        """
+        if not self._drivers:
+            return None
+
+        scored = [(driver, name, driver.can_handle_response(response)) for name, driver in self._drivers.items()]
+        best_driver, best_name, best_score = max(scored, key=lambda x: x[2])
+
+        return (best_driver, best_name) if best_score > 0 else None
+
     def render(self, driver_or_model: str) -> Any:
         """
         Render all tools using the specified driver.
@@ -272,7 +335,8 @@ class Universe:
         response: Any,
         *,
         context: Optional[Dict[str, Any]] = None,
-        driver_or_model: str = "openai",
+        driver_or_model: Optional[str] = None,
+        tool_filter: ToolFilter = None,
     ) -> List[ToolResult]:
         """
         Parse and execute tool calls from an LLM response.
@@ -280,22 +344,98 @@ class Universe:
         Args:
             response: The LLM response containing tool calls.
             context: Context data for dependency injection.
-            driver_or_model: The driver to use for parsing.
+            driver_or_model: The driver to use for parsing. If None, auto-detect.
+            tool_filter: Optional ToolExpression to filter allowed tool calls.
+                Denied calls return ToolResult with error but do not abort dispatch.
 
         Returns:
             A list of ToolResult objects.
         """
         from uni_tool.core.execution import execute_tool_calls
 
-        driver = self._get_driver(driver_or_model)
-        calls = driver.parse(response)
+        # Select driver: explicit > auto-detect > fallback
+        driver: Optional["BaseDriver"] = None
+        driver_name: Optional[str] = None
 
-        # Enrich calls with context
-        if context:
-            for call in calls:
+        if driver_or_model:
+            # Explicit driver specified
+            driver = self._get_driver(driver_or_model)
+            driver_name = driver_or_model
+        else:
+            # Auto-detect based on response fingerprint
+            detection_result = self._select_driver_for_response(response)
+            if detection_result:
+                driver, driver_name = detection_result
+            else:
+                # Fallback to openai if available
+                if "openai" in self._drivers:
+                    driver = self._drivers["openai"]
+                    driver_name = "openai"
+
+        if driver is None:
+            # Return error result for detection failure
+            return [
+                ToolResult(
+                    id="detection_error",
+                    result=None,
+                    error="Unable to detect response protocol and no default driver available",
+                    meta={"error_code": "PROTOCOL_DETECTION_FAILED"},
+                )
+            ]
+
+        # Parse response
+        try:
+            calls = driver.parse(response)
+        except Exception as e:
+            return [
+                ToolResult(
+                    id="parse_error",
+                    result=None,
+                    error=str(e),
+                    meta={"error_code": "PARSE_ERROR", "driver": driver_name},
+                )
+            ]
+
+        # Apply tool filter and enrich context
+        results: List[ToolResult] = []
+        allowed_calls: List[ToolCall] = []
+
+        for call in calls:
+            # Enrich with context
+            if context:
                 call.context.update(context)
 
-        return await execute_tool_calls(self, calls)
+            # Apply filter
+            if tool_filter is not None:
+                # Check if filter matches this tool call
+                metadata = self.get(call.name)
+                if metadata is None:
+                    # Tool not found - will be handled in execution
+                    allowed_calls.append(call)
+                elif not tool_filter.matches(metadata):
+                    # Denied by filter
+                    results.append(
+                        ToolResult(
+                            id=call.id,
+                            result=None,
+                            error=f"Tool '{call.name}' denied by filter",
+                            meta={"error_code": "FILTER_DENIED", "filter": repr(tool_filter)},
+                        )
+                    )
+                    continue
+
+            allowed_calls.append(call)
+
+        # Execute allowed calls
+        if allowed_calls:
+            execution_results = await execute_tool_calls(self, allowed_calls)
+            results.extend(execution_results)
+
+        # Sort results to maintain original call order
+        call_id_order = {call.id: i for i, call in enumerate(calls)}
+        results.sort(key=lambda r: call_id_order.get(r.id, len(calls)))
+
+        return results
 
     def tool(
         self,
@@ -329,6 +469,8 @@ class Universe:
         *,
         prefix: Optional[str] = None,
         tags: Optional[Set[str]] = None,
+        exclude: Optional[List[str]] = None,
+        middlewares: Optional[List[MiddlewareObj]] = None,
     ) -> Callable[[type], type]:
         """
         Decorator to register all methods of a class as tools.
@@ -336,6 +478,8 @@ class Universe:
         Args:
             prefix: Optional prefix for tool names.
             tags: Optional tags applied to all methods.
+            exclude: Optional list of method names to exclude from registration.
+            middlewares: Optional list of middlewares to apply to all registered methods.
 
         Returns:
             A class decorator.
@@ -346,6 +490,8 @@ class Universe:
             self,
             prefix=prefix,
             tags=tags,
+            exclude=exclude,
+            middlewares=middlewares,
         )
 
     def _reset(self) -> None:

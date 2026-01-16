@@ -10,7 +10,7 @@ import json
 from typing import Any, Dict, List
 
 from uni_tool.drivers.base import BaseDriver
-from uni_tool.core.models import ToolMetadata, ToolCall
+from uni_tool.core.models import ToolMetadata, ToolCall, ModelProfile
 from uni_tool.core.errors import UnsupportedResponseFormatError
 
 
@@ -20,6 +20,69 @@ class OpenAIDriver(BaseDriver):
 
     Supports both Chat Completions API tool format.
     """
+
+    # OpenAI-compatible model prefixes
+    SUPPORTED_MODEL_PREFIXES = ("gpt-", "o1-", "o3-")
+
+    def can_handle(self, profile: ModelProfile) -> int:
+        """
+        Score capability to handle the model profile.
+
+        Returns 100 for OpenAI models, 0 otherwise.
+        """
+        model_name = profile.name.lower()
+
+        # Native support for OpenAI models
+        for prefix in self.SUPPORTED_MODEL_PREFIXES:
+            if model_name.startswith(prefix):
+                return 100
+
+        # Check for FC_NATIVE capability
+        if "FC_NATIVE" in profile.capabilities:
+            return 50
+
+        return 0
+
+    def can_handle_response(self, response: Any) -> int:
+        """
+        Score capability to parse the response based on OpenAI fingerprint.
+
+        Returns 100 for responses with OpenAI tool_calls structure.
+        """
+        try:
+            if self._is_openai_tool_calls_list(response):
+                return 100
+            if isinstance(response, dict) and self._has_openai_tool_calls(response):
+                return 100
+            return 0
+        except Exception:
+            return 0
+
+    def _is_openai_tool_calls_list(self, response: Any) -> bool:
+        """Check if response is a direct list of OpenAI tool calls."""
+        if not isinstance(response, list) or not response:
+            return False
+        first = response[0]
+        return isinstance(first, dict) and first.get("type") == "function" and "name" in first.get("function", {})
+
+    def _has_openai_tool_calls(self, response: dict) -> bool:
+        """Check if dict response contains OpenAI tool_calls."""
+        # Direct tool_calls key
+        if "tool_calls" in response:
+            tool_calls = response["tool_calls"]
+            if isinstance(tool_calls, list) and tool_calls:
+                first = tool_calls[0]
+                if isinstance(first, dict) and first.get("type") == "function":
+                    return True
+
+        # ChatCompletion format: choices[0].message.tool_calls
+        choices = response.get("choices", [])
+        if choices and isinstance(choices[0], dict):
+            message = choices[0].get("message", {})
+            if "tool_calls" in message:
+                return True
+
+        return False
 
     def render(self, tools: List[ToolMetadata]) -> List[Dict[str, Any]]:
         """

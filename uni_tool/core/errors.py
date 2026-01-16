@@ -60,3 +60,19 @@ class MiddlewareError(UniToolError):
         self.middleware_name = middleware_name
         self.original_error = original_error
         super().__init__(f"Middleware '{middleware_name}' failed: {original_error}")
+
+
+class ToolFilterDeniedError(UniToolError):
+    """Raised when a tool call is denied by the filter."""
+
+    def __init__(self, tool_name: str, filter_expression: str):
+        self.tool_name = tool_name
+        self.filter_expression = filter_expression
+        super().__init__(f"Tool '{tool_name}' denied by filter: {filter_expression}")
+
+
+class ProtocolDetectionError(UniToolError):
+    """Raised when automatic protocol detection fails."""
+
+    def __init__(self, message: str = "Unable to detect response protocol"):
+        super().__init__(message)

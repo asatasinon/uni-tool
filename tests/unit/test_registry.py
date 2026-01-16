@@ -8,12 +8,13 @@ Tests cover:
 - Tool metadata extraction
 """
 
-import pytest
 from typing import Annotated
 
-from uni_tool.core.universe import Universe
-from uni_tool.core.models import ToolMetadata, Tag
+import pytest
+
 from uni_tool.core.errors import DuplicateToolError, ToolNotFoundError
+from uni_tool.core.models import Tag, ToolMetadata
+from uni_tool.core.universe import Universe
 from uni_tool.utils.injection import Injected
 
 
@@ -194,9 +195,9 @@ class TestToolExpression:
             """An admin tool."""
             return "admin"
 
-        # Filter by tag
-        view = universe[Tag("finance")]
-        tools = view.get_tools()
+        # Filter by tag - now returns ToolSet
+        tool_set = universe[Tag("finance")]
+        tools = tool_set.tools
 
         assert len(tools) == 1
         assert tools[0].name == "finance_tool"
@@ -220,29 +221,63 @@ class TestToolExpression:
             return "internal"
 
         # Filter: api AND read
-        view = universe[Tag("api") & Tag("read")]
-        tools = view.get_tools()
+        tool_set = universe[Tag("api") & Tag("read")]
+        tools = tool_set.tools
         assert len(tools) == 1
         assert tools[0].name == "api_read"
 
         # Filter: api OR internal
-        view2 = universe[Tag("api") | Tag("internal")]
-        tools2 = view2.get_tools()
+        tool_set2 = universe[Tag("api") | Tag("internal")]
+        tools2 = tool_set2.tools
         assert len(tools2) == 3
 
-    def test_access_by_name(self, universe):
-        """Test accessing a tool by name."""
+    def test_filter_by_tag_string(self, universe):
+        """Test filtering tools by tag string - str is treated as Tag."""
+
+        @universe.tool(tags={"finance"})
+        def finance_tool() -> str:
+            """A finance tool."""
+            return "finance"
+
+        @universe.tool(tags={"admin"})
+        def admin_tool() -> str:
+            """An admin tool."""
+            return "admin"
+
+        # Filter by tag string - now str is treated as Tag filter
+        tool_set = universe["finance"]
+        tools = tool_set.tools
+
+        assert len(tools) == 1
+        assert tools[0].name == "finance_tool"
+
+    def test_access_by_name_via_get(self, universe):
+        """Test accessing a tool by name via get() method."""
 
         @universe.tool()
         def named_tool() -> str:
             """A named tool."""
             return "named"
 
-        tool = universe["named_tool"]
+        # Use get() for name-based lookup
+        tool = universe.get("named_tool")
         assert isinstance(tool, ToolMetadata)
         assert tool.name == "named_tool"
 
-    def test_access_nonexistent_raises_error(self, universe):
-        """Test that accessing a nonexistent tool raises an error."""
-        with pytest.raises(ToolNotFoundError):
-            _ = universe["nonexistent"]
+    def test_access_nonexistent_via_get_returns_none(self, universe):
+        """Test that get() returns None for nonexistent tools."""
+        tool = universe.get("nonexistent")
+        assert tool is None
+
+    def test_filter_nonexistent_tag_returns_empty_set(self, universe):
+        """Test that filtering by nonexistent tag returns empty ToolSet."""
+
+        @universe.tool(tags={"finance"})
+        def finance_tool() -> str:
+            """A finance tool."""
+            return "finance"
+
+        # Filter by nonexistent tag returns empty ToolSet
+        tool_set = universe["nonexistent_tag"]
+        assert len(tool_set) == 0
+        assert not tool_set  # Empty ToolSet is falsy

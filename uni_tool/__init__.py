@@ -34,6 +34,10 @@ from uni_tool.core.models import (
     And,
     Or,
     Not,
+    ToolName,
+    ToolFilter,
+    ToolSet,
+    ModelProfile,
 )
 
 # Errors
@@ -45,10 +49,12 @@ from uni_tool.core.errors import (
     ToolExecutionError,
     UnsupportedResponseFormatError,
     MiddlewareError,
+    ToolFilterDeniedError,
+    ProtocolDetectionError,
 )
 
 # Universe (core runtime)
-from uni_tool.core.universe import Universe, UniverseView
+from uni_tool.core.universe import Universe
 
 # Dependency injection
 from uni_tool.utils.injection import Injected
@@ -56,6 +62,9 @@ from uni_tool.utils.injection import Injected
 # Drivers
 from uni_tool.drivers.base import BaseDriver
 from uni_tool.drivers.openai import OpenAIDriver
+from uni_tool.drivers.anthropic import AnthropicDriver
+from uni_tool.drivers.xml import XMLDriver
+from uni_tool.drivers.markdown import MarkdownDriver
 
 # Middlewares
 from uni_tool.middlewares.base import MiddlewareProtocol
@@ -68,6 +77,9 @@ from uni_tool.middlewares.logging import LoggingMiddleware, create_logging_middl
 # Create and configure the global universe instance
 universe = Universe()
 universe.register_driver("openai", OpenAIDriver())
+universe.register_driver("anthropic", AnthropicDriver())
+universe.register_driver("xml", XMLDriver())
+universe.register_driver("markdown", MarkdownDriver())
 
 
 __all__ = [
@@ -75,7 +87,8 @@ __all__ = [
     "universe",
     # Core classes
     "Universe",
-    "UniverseView",
+    "ToolSet",
+    "ModelProfile",
     # Models
     "ToolMetadata",
     "ToolCall",
@@ -88,11 +101,16 @@ __all__ = [
     "And",
     "Or",
     "Not",
+    "ToolName",
+    "ToolFilter",
     # Dependency injection
     "Injected",
     # Drivers
     "BaseDriver",
     "OpenAIDriver",
+    "AnthropicDriver",
+    "XMLDriver",
+    "MarkdownDriver",
     # Middlewares
     "MiddlewareProtocol",
     "NextHandler",
@@ -110,6 +128,8 @@ __all__ = [
     "ToolExecutionError",
     "UnsupportedResponseFormatError",
     "MiddlewareError",
+    "ToolFilterDeniedError",
+    "ProtocolDetectionError",
 ]
 
 __version__ = "0.1.0"

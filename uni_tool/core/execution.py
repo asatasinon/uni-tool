@@ -7,6 +7,7 @@ This module implements the core dispatch and execution logic with middleware sup
 from __future__ import annotations
 
 import asyncio
+import copy
 import time
 from typing import Any, List, TYPE_CHECKING
 
@@ -175,14 +176,35 @@ async def execute_single_tool(
         )
 
 
+def _isolate_context(call: ToolCall) -> ToolCall:
+    """
+    Create a copy of the ToolCall with an isolated context.
+
+    This ensures that parallel executions do not cross-contaminate context data.
+
+    Args:
+        call: The original ToolCall.
+
+    Returns:
+        A new ToolCall with a deep-copied context.
+    """
+    return ToolCall(
+        id=call.id,
+        name=call.name,
+        arguments=call.arguments,  # Arguments are read-only, no need to copy
+        context=copy.deepcopy(call.context),
+    )
+
+
 async def execute_tool_calls(
     universe: "Universe",
     calls: List[ToolCall],
 ) -> List[ToolResult]:
     """
-    Execute multiple tool calls.
+    Execute multiple tool calls in parallel.
 
-    Currently executes sequentially. Parallel execution can be added later.
+    Uses asyncio.gather for parallel execution while maintaining result order
+    matching the input call order. Each call receives an isolated context copy.
 
     Args:
         universe: The Universe instance.
@@ -191,8 +213,16 @@ async def execute_tool_calls(
     Returns:
         A list of ToolResult objects in the same order as calls.
     """
-    results = []
-    for call in calls:
-        result = await execute_single_tool(universe, call)
-        results.append(result)
-    return results
+    if not calls:
+        return []
+
+    # Create isolated copies of each call to prevent context cross-contamination
+    isolated_calls = [_isolate_context(call) for call in calls]
+
+    # Execute all calls in parallel
+    results = await asyncio.gather(
+        *[execute_single_tool(universe, call) for call in isolated_calls],
+        return_exceptions=False,  # Let exceptions propagate through ToolResult.error
+    )
+
+    return list(results)

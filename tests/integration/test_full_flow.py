@@ -6,15 +6,23 @@ Tests cover:
 - Middleware pipeline with audit and monitor
 - Tool filtering and rendering
 - Error handling scenarios
+- Parallel execution performance
+- Protocol auto-detection
+- Tool filter denial accuracy
 """
 
+import asyncio
 import pytest
 import json
+import time
 from typing import Annotated
 
 from uni_tool.core.universe import Universe
-from uni_tool.core.models import Tag
+from uni_tool.core.models import Tag, ToolName
 from uni_tool.drivers.openai import OpenAIDriver
+from uni_tool.drivers.anthropic import AnthropicDriver
+from uni_tool.drivers.xml import XMLDriver
+from uni_tool.drivers.markdown import MarkdownDriver
 from uni_tool.middlewares.audit import AuditMiddleware
 from uni_tool.middlewares.monitor import MonitorMiddleware
 from uni_tool.utils.injection import Injected
@@ -299,20 +307,20 @@ class TestToolFiltering:
             return "internal"
 
         # Test: Get all API tools
-        api_tools = universe[Tag("api")].get_tools()
+        api_tools = universe[Tag("api")].tools
         assert len(api_tools) == 3
 
         # Test: Get only v1 read tools
-        v1_read_tools = universe[Tag("v1") & Tag("read")].get_tools()
+        v1_read_tools = universe[Tag("v1") & Tag("read")].tools
         assert len(v1_read_tools) == 1
         assert v1_read_tools[0].name == "api_v1_read"
 
         # Test: Get non-internal tools
-        public_tools = universe[~Tag("internal")].get_tools()
+        public_tools = universe[~Tag("internal")].tools
         assert len(public_tools) == 3
 
         # Test: Get v1 or internal
-        mixed_tools = universe[Tag("v1") | Tag("internal")].get_tools()
+        mixed_tools = universe[Tag("v1") | Tag("internal")].tools
         assert len(mixed_tools) == 3  # 2 v1 + 1 internal
 
 
@@ -345,8 +353,10 @@ class TestBindDecorator:
         assert "_private" not in universe
         assert "math__private" not in universe
 
-        # Verify tags were applied
-        assert "calculator" in universe["math_add"].tags
+        # Verify tags were applied (use get() for name-based lookup)
+        math_add_tool = universe.get("math_add")
+        assert math_add_tool is not None
+        assert "calculator" in math_add_tool.tags
 
     @pytest.mark.asyncio
     async def test_bound_methods_execute(self, fresh_universe):
@@ -376,3 +386,403 @@ class TestBindDecorator:
 
         results = await universe.dispatch(response, context={})
         assert results[0].result == "HELLO"
+
+
+class TestParallelExecution:
+    """Tests for parallel execution performance (SC-002)."""
+
+    @pytest.fixture
+    def universe_with_drivers(self):
+        """Create Universe with all drivers."""
+        u = Universe()
+        u._reset()
+        u.register_driver("openai", OpenAIDriver())
+        u.register_driver("anthropic", AnthropicDriver())
+        u.register_driver("xml", XMLDriver())
+        u.register_driver("markdown", MarkdownDriver())
+        return u
+
+    @pytest.mark.asyncio
+    async def test_parallel_execution_performance_improvement(self, universe_with_drivers):
+        """
+        Test that parallel execution is at least 30% faster than sequential baseline.
+
+        SC-002: In responses with at least 4 tool calls, total execution time
+        should be reduced by at least 30% compared to sequential baseline.
+        """
+        universe = universe_with_drivers
+        sleep_time = 0.1  # 100ms per tool
+
+        @universe.tool()
+        async def slow_tool(id: int) -> dict:
+            """A tool that takes time to execute."""
+            await asyncio.sleep(sleep_time)
+            return {"id": id, "completed": True}
+
+        # Create response with 4+ tool calls
+        response = {
+            "tool_calls": [
+                {
+                    "id": f"call_{i}",
+                    "type": "function",
+                    "function": {"name": "slow_tool", "arguments": json.dumps({"id": i})},
+                }
+                for i in range(4)
+            ]
+        }
+
+        # Measure parallel execution time
+        start_time = time.perf_counter()
+        results = await universe.dispatch(response, driver_or_model="openai", context={})
+        parallel_time = time.perf_counter() - start_time
+
+        # All should succeed
+        assert len(results) == 4
+        assert all(r.is_success for r in results)
+
+        # Sequential baseline would be: 4 * 100ms = 400ms
+        sequential_baseline = 4 * sleep_time
+
+        # Parallel should be at least 30% faster
+        # (1 - 0.3) * baseline = 0.7 * 400ms = 280ms
+        expected_max_time = sequential_baseline * 0.7
+
+        # Add some buffer for overhead (50ms)
+        assert parallel_time < expected_max_time + 0.05, (
+            f"Parallel execution ({parallel_time:.3f}s) should be at least 30% faster "
+            f"than sequential baseline ({sequential_baseline:.3f}s). "
+            f"Expected < {expected_max_time:.3f}s"
+        )
+
+    @pytest.mark.asyncio
+    async def test_parallel_execution_maintains_order(self, universe_with_drivers):
+        """Test that parallel execution maintains result order."""
+        universe = universe_with_drivers
+
+        @universe.tool()
+        async def ordered_tool(order: int) -> int:
+            """Tool that returns its order."""
+            # Vary sleep time to try to cause reordering
+            await asyncio.sleep(0.01 * (5 - order))
+            return order
+
+        response = {
+            "tool_calls": [
+                {
+                    "id": f"call_{i}",
+                    "type": "function",
+                    "function": {"name": "ordered_tool", "arguments": json.dumps({"order": i})},
+                }
+                for i in range(5)
+            ]
+        }
+
+        results = await universe.dispatch(response, driver_or_model="openai", context={})
+
+        # Results should be in the same order as calls
+        assert [r.result for r in results] == [0, 1, 2, 3, 4]
+
+
+class TestProtocolAutoDetection:
+    """Tests for protocol auto-detection (SC-004)."""
+
+    @pytest.fixture
+    def universe_with_all_drivers(self):
+        """Create Universe with all drivers."""
+        u = Universe()
+        u._reset()
+        u.register_driver("openai", OpenAIDriver())
+        u.register_driver("anthropic", AnthropicDriver())
+        u.register_driver("xml", XMLDriver())
+        u.register_driver("markdown", MarkdownDriver())
+        return u
+
+    @pytest.mark.asyncio
+    async def test_auto_detect_openai_format(self, universe_with_all_drivers):
+        """Test auto-detection of OpenAI format."""
+        universe = universe_with_all_drivers
+
+        @universe.tool()
+        def echo(msg: str) -> str:
+            return msg
+
+        response = {
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "echo", "arguments": '{"msg": "openai"}'},
+                }
+            ]
+        }
+
+        # No driver specified - should auto-detect
+        results = await universe.dispatch(response, context={})
+
+        assert len(results) == 1
+        assert results[0].is_success
+        assert results[0].result == "openai"
+
+    @pytest.mark.asyncio
+    async def test_auto_detect_anthropic_format(self, universe_with_all_drivers):
+        """Test auto-detection of Anthropic format."""
+        universe = universe_with_all_drivers
+
+        @universe.tool()
+        def echo(msg: str) -> str:
+            return msg
+
+        response = {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_1",
+                    "name": "echo",
+                    "input": {"msg": "anthropic"},
+                }
+            ]
+        }
+
+        results = await universe.dispatch(response, context={})
+
+        assert len(results) == 1
+        assert results[0].is_success
+        assert results[0].result == "anthropic"
+
+    @pytest.mark.asyncio
+    async def test_auto_detect_xml_format(self, universe_with_all_drivers):
+        """Test auto-detection of XML format."""
+        universe = universe_with_all_drivers
+
+        @universe.tool()
+        def echo(msg: str) -> str:
+            return msg
+
+        response = """
+        <tool_call>
+            <name>echo</name>
+            <arguments>{"msg": "xml"}</arguments>
+        </tool_call>
+        """
+
+        results = await universe.dispatch(response, context={})
+
+        assert len(results) == 1
+        assert results[0].is_success
+        assert results[0].result == "xml"
+
+    @pytest.mark.asyncio
+    async def test_auto_detect_markdown_format(self, universe_with_all_drivers):
+        """Test auto-detection of Markdown format."""
+        universe = universe_with_all_drivers
+
+        @universe.tool()
+        def echo(msg: str) -> str:
+            return msg
+
+        response = """
+        ```tool_call
+        {"name": "echo", "arguments": {"msg": "markdown"}}
+        ```
+        """
+
+        results = await universe.dispatch(response, context={})
+
+        assert len(results) == 1
+        assert results[0].is_success
+        assert results[0].result == "markdown"
+
+    @pytest.mark.asyncio
+    async def test_protocol_detection_success_rate_100_percent(self, universe_with_all_drivers):
+        """
+        SC-004: Auto-detection success rate should be 100% for supported formats.
+        """
+        universe = universe_with_all_drivers
+
+        @universe.tool()
+        def echo(msg: str) -> str:
+            return msg
+
+        test_cases = [
+            # OpenAI format
+            {
+                "tool_calls": [
+                    {"id": "1", "type": "function", "function": {"name": "echo", "arguments": '{"msg": "1"}'}}
+                ]
+            },
+            # Anthropic format
+            {"content": [{"type": "tool_use", "id": "2", "name": "echo", "input": {"msg": "2"}}]},
+            # XML format
+            '<tool_call><name>echo</name><arguments>{"msg": "3"}</arguments></tool_call>',
+            # Markdown format
+            '```tool_call\n{"name": "echo", "arguments": {"msg": "4"}}\n```',
+        ]
+
+        success_count = 0
+        for response in test_cases:
+            results = await universe.dispatch(response, context={})
+            if results and results[0].is_success:
+                success_count += 1
+
+        success_rate = success_count / len(test_cases)
+        assert success_rate == 1.0, f"Detection success rate was {success_rate * 100}%, expected 100%"
+
+
+class TestToolFilterDenialAccuracy:
+    """Tests for tool filter denial accuracy (SC-003)."""
+
+    @pytest.fixture
+    def universe_with_tools(self):
+        """Create Universe with multiple tools and drivers."""
+        u = Universe()
+        u._reset()
+        u.register_driver("openai", OpenAIDriver())
+
+        @u.tool(tags={"public", "api"})
+        def public_api() -> str:
+            return "public"
+
+        @u.tool(tags={"admin", "api"})
+        def admin_api() -> str:
+            return "admin"
+
+        @u.tool(tags={"internal"})
+        def internal_tool() -> str:
+            return "internal"
+
+        return u
+
+    @pytest.mark.asyncio
+    async def test_filter_denies_non_matching_tools(self, universe_with_tools):
+        """Test that filter correctly denies non-matching tools."""
+        universe = universe_with_tools
+
+        response = {
+            "tool_calls": [
+                {"id": "1", "type": "function", "function": {"name": "public_api", "arguments": "{}"}},
+                {"id": "2", "type": "function", "function": {"name": "admin_api", "arguments": "{}"}},
+                {"id": "3", "type": "function", "function": {"name": "internal_tool", "arguments": "{}"}},
+            ]
+        }
+
+        # Filter to only allow public tools
+        results = await universe.dispatch(
+            response,
+            driver_or_model="openai",
+            context={},
+            tool_filter=Tag("public"),
+        )
+
+        assert len(results) == 3
+
+        # public_api should succeed
+        assert results[0].is_success
+        assert results[0].result == "public"
+
+        # admin_api should be denied
+        assert not results[1].is_success
+        assert "denied by filter" in results[1].error
+        assert results[1].meta.get("error_code") == "FILTER_DENIED"
+
+        # internal_tool should be denied
+        assert not results[2].is_success
+        assert "denied by filter" in results[2].error
+
+    @pytest.mark.asyncio
+    async def test_tool_name_filter_exact_match(self, universe_with_tools):
+        """Test ToolName filter for exact name matching."""
+        universe = universe_with_tools
+
+        response = {
+            "tool_calls": [
+                {"id": "1", "type": "function", "function": {"name": "public_api", "arguments": "{}"}},
+                {"id": "2", "type": "function", "function": {"name": "admin_api", "arguments": "{}"}},
+            ]
+        }
+
+        # Filter to only allow specific tool by name
+        results = await universe.dispatch(
+            response,
+            driver_or_model="openai",
+            context={},
+            tool_filter=ToolName("public_api"),
+        )
+
+        assert len(results) == 2
+        assert results[0].is_success  # public_api allowed
+        assert not results[1].is_success  # admin_api denied
+
+    @pytest.mark.asyncio
+    async def test_filter_denial_accuracy_100_percent(self, universe_with_tools):
+        """
+        SC-003: Tool filter denial accuracy should be 100%.
+
+        All denied calls should have error and should not execute.
+        """
+        universe = universe_with_tools
+
+        # Track if internal_tool was actually called
+        call_tracker = {"internal_called": False}
+
+        @universe.tool(tags={"tracked"})
+        def tracked_internal() -> str:
+            call_tracker["internal_called"] = True
+            return "should not run"
+
+        response = {
+            "tool_calls": [
+                {"id": "1", "type": "function", "function": {"name": "tracked_internal", "arguments": "{}"}},
+                {"id": "2", "type": "function", "function": {"name": "public_api", "arguments": "{}"}},
+            ]
+        }
+
+        # Filter to deny tracked tools
+        results = await universe.dispatch(
+            response,
+            driver_or_model="openai",
+            context={},
+            tool_filter=~Tag("tracked"),
+        )
+
+        # Verify denial accuracy
+        denied_results = [r for r in results if not r.is_success and "denied" in (r.error or "")]
+        allowed_results = [r for r in results if r.is_success]
+
+        # tracked_internal should be denied and NOT executed
+        assert len(denied_results) == 1
+        assert denied_results[0].id == "1"
+        assert not call_tracker["internal_called"], "Denied tool should not have been executed"
+
+        # public_api should be allowed and executed
+        assert len(allowed_results) == 1
+        assert allowed_results[0].result == "public"
+
+    @pytest.mark.asyncio
+    async def test_filter_combined_expression(self, universe_with_tools):
+        """Test complex filter expressions."""
+        universe = universe_with_tools
+
+        response = {
+            "tool_calls": [
+                {"id": "1", "type": "function", "function": {"name": "public_api", "arguments": "{}"}},
+                {"id": "2", "type": "function", "function": {"name": "admin_api", "arguments": "{}"}},
+                {"id": "3", "type": "function", "function": {"name": "internal_tool", "arguments": "{}"}},
+            ]
+        }
+
+        # Filter: api AND NOT admin
+        results = await universe.dispatch(
+            response,
+            driver_or_model="openai",
+            context={},
+            tool_filter=Tag("api") & ~Tag("admin"),
+        )
+
+        # public_api: has api, not admin -> allowed
+        assert results[0].is_success
+
+        # admin_api: has api but also admin -> denied
+        assert not results[1].is_success
+
+        # internal_tool: no api tag -> denied
+        assert not results[2].is_success

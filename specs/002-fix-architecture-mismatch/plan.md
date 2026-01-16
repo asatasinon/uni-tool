@@ -41,7 +41,45 @@
 - [x] **依赖注入**: 保持 `Injected` 作为敏感上下文注入机制。
 - [x] **中间件治理**: 中间件去重与配置仍由中间件层管理。
 - [x] **技术栈合规**: Python 3.13+、AsyncIO、Pydantic、uv、pytest。
-- [ ] **设计审查**: `Universe` 与 `Driver` 抽象变更完成设计审查并记录结论。
+- [x] **设计审查**: `Universe` 与 `Driver` 抽象变更完成设计审查并记录结论。
+
+## 设计审查记录
+
+**审查日期**: 2026-01-16
+**审查结论**: 通过
+
+### 关键设计决策
+
+1. **`Universe.__getitem__` 语义变更**: 
+   - `str` 参数视为 Tag 过滤，返回 `ToolSet`
+   - `get(name)` 保留为按名称获取单个工具的入口
+   - **理由**: 与架构文档保持一致，同时保留显式工具访问能力
+
+2. **`ToolSet.render` 协商机制**:
+   - 接受模型名或驱动名字符串
+   - 驱动名直接使用该驱动；模型名生成 `ModelProfile` 并通过 `can_handle` 评分择优
+   - **理由**: 支持显式与自动协商双通道
+
+3. **驱动层能力扩展**:
+   - `BaseDriver` 新增 `can_handle(profile)` 和 `can_handle_response(response)` 评分接口
+   - 返回 0-100 分数，0 表示不支持，100 表示最佳匹配
+   - **理由**: 将协议差异下沉到驱动层，保持 Universe 协议无关
+
+4. **`dispatch` 安全过滤**:
+   - `tool_filter` 参数仅支持 `ToolExpression`
+   - 工具名过滤通过 `ToolName(ToolExpression)` 实现统一入口
+   - 被拒绝的调用返回带 `error_code` 的 `ToolResult`，不执行工具函数
+   - **理由**: 统一过滤规则，避免多分支行为差异
+
+5. **中间件去重标识**:
+   - `MiddlewareObj.uid` 默认使用 `__qualname__` 生成稳定标识
+   - 相同 uid 后注册的中间件覆盖先注册的
+   - **理由**: 支持中间件更新与覆盖，避免 `id()` 的不稳定性
+
+6. **并行执行与上下文隔离**:
+   - `execute_tool_calls` 使用 `asyncio.gather` 并行执行
+   - 每个 `ToolCall.context` 独立拷贝
+   - **理由**: 满足性能目标（≥30% 提升）与上下文隔离要求
 
 ## 项目结构
 
