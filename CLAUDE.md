@@ -44,4 +44,5 @@ uv run pytest tests/unit/test_middleware.py
 ```
 
 ## Technical Context
-**before plan or implement, need to use `context7 mcp tools` to get latest technical context.**
+
+**before implement, need to use `context7 mcp tools` to get latest technical context.**
