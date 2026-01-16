@@ -8,11 +8,8 @@ Tests cover:
 - Combined expressions
 """
 
-from uni_tool.core.models import (
-    ToolMetadata,
-    Tag,
-    Prefix,
-)
+from uni_tool.core.filters import Tag, Prefix
+from uni_tool.core.models import ToolMetadata
 
 
 def create_mock_metadata(

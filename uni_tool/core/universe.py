@@ -21,13 +21,11 @@ from uni_tool.core.errors import (
     DuplicateToolError,
     ToolNotFoundError,
 )
+from uni_tool.core.filters import Tag, ToolExpression
 from uni_tool.core.models import (
     MiddlewareObj,
     ModelProfile,
-    Tag,
     ToolCall,
-    ToolExpression,
-    ToolFilter,
     ToolMetadata,
     ToolResult,
     ToolSet,
@@ -336,7 +334,7 @@ class Universe:
         *,
         context: Optional[Dict[str, Any]] = None,
         driver_or_model: Optional[str] = None,
-        tool_filter: ToolFilter = None,
+        tool_filter: Optional[ToolExpression] = None,
     ) -> List[ToolResult]:
         """
         Parse and execute tool calls from an LLM response.
@@ -410,9 +408,16 @@ class Universe:
                 # Check if filter matches this tool call
                 metadata = self.get(call.name)
                 if metadata is None:
-                    # Tool not found - will be handled in execution
-                    allowed_calls.append(call)
-                elif not tool_filter.matches(metadata):
+                    results.append(
+                        ToolResult(
+                            id=call.id,
+                            result=None,
+                            error=f"Tool '{call.name}' is not registered",
+                            meta={"error_code": "TOOL_NOT_FOUND", "filter": repr(tool_filter)},
+                        )
+                    )
+                    continue
+                if not tool_filter.matches(metadata):
                     # Denied by filter
                     results.append(
                         ToolResult(

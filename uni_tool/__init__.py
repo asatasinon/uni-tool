@@ -28,6 +28,12 @@ from uni_tool.core.models import (
     ToolCall,
     ToolResult,
     MiddlewareObj,
+    ToolSet,
+    ModelProfile,
+)
+
+# Tool filters
+from uni_tool.core.filters import (
     ToolExpression,
     Tag,
     Prefix,
@@ -36,8 +42,6 @@ from uni_tool.core.models import (
     Not,
     ToolName,
     ToolFilter,
-    ToolSet,
-    ModelProfile,
 )
 
 # Errors

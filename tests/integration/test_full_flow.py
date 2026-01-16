@@ -18,7 +18,7 @@ import time
 from typing import Annotated
 
 from uni_tool.core.universe import Universe
-from uni_tool.core.models import Tag, ToolName
+from uni_tool.core.filters import Tag, ToolName
 from uni_tool.drivers.openai import OpenAIDriver
 from uni_tool.drivers.anthropic import AnthropicDriver
 from uni_tool.drivers.xml import XMLDriver

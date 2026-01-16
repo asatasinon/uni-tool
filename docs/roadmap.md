@@ -1,12 +1,12 @@
 
 ## 1. ToolExpression 增强
 
-1. 实现 TagList(ToolExpression) 类，接受一组 Tag 作为参数，用于表示一组 Tag 的组合，与 `Tag("a") | Tag("b") | Tag("c")` 等价。
+1. 实现 TagSet(ToolExpression) 类，接受一组 Tag 作为参数，用于表示一组 Tag 的组合，与 `Tag("a") | Tag("b") | Tag("c")` 等价。
    - 输入校验：空列表、重复 Tag、非法 Tag
    - 求值语义：短路 OR，保持与手写表达式一致
    - 表达能力：稳定的字符串表示与可读输出
    - 序列化：to_dict/from_dict 支持配置化加载
-2. 实现 TagNotList(ToolExpression) 类，接受一组 Tag 作为参数，用于表示一组 Tag 的 Not 组合，与 `~Tag("a") & ~Tag("b") & ~Tag("c")` 等价。
+2. 实现 TagNotSet(ToolExpression) 类，接受一组 Tag 作为参数，用于表示一组 Tag 的 Not 组合，与 `~(Tag("a") | Tag("b") | Tag("c"))` 等价。
    - 输入校验：空列表、重复 Tag、非法 Tag
    - 求值语义：短路 AND，保持与手写表达式一致
    - 表达能力：稳定的字符串表示与可读输出
