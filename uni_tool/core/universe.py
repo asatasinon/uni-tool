@@ -21,7 +21,7 @@ from uni_tool.core.errors import (
     DuplicateToolError,
     ToolNotFoundError,
 )
-from uni_tool.core.filters import Tag, ToolExpression
+from uni_tool.core.expressions import ToolExpression
 from uni_tool.core.models import (
     MiddlewareObj,
     ModelProfile,
@@ -30,6 +30,7 @@ from uni_tool.core.models import (
     ToolResult,
     ToolSet,
 )
+from uni_tool.filters import Tag
 
 if TYPE_CHECKING:
     from uni_tool.drivers.base import BaseDriver

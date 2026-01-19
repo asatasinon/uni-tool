@@ -12,7 +12,7 @@ import pytest
 from typing import Any, List
 
 from uni_tool.core.universe import Universe
-from uni_tool.core.filters import Tag
+from uni_tool.filters import Tag
 from uni_tool.core.models import ToolCall, MiddlewareObj
 from uni_tool.core.execution import execute_single_tool
 from uni_tool.middlewares.base import (

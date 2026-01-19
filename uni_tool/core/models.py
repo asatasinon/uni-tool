@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from uni_tool.core.expressions import ToolExpression
+
 if TYPE_CHECKING:
-    from uni_tool.core.filters import ToolExpression
     from uni_tool.drivers.base import BaseDriver
 
 

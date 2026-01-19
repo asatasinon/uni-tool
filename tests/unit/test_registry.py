@@ -13,7 +13,7 @@ from typing import Annotated
 import pytest
 
 from uni_tool.core.errors import DuplicateToolError, ToolNotFoundError
-from uni_tool.core.filters import Tag
+from uni_tool.filters import Tag
 from uni_tool.core.models import ToolMetadata
 from uni_tool.core.universe import Universe
 from uni_tool.utils.injection import Injected

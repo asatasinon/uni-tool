@@ -8,7 +8,7 @@ Tests cover:
 - Combined expressions
 """
 
-from uni_tool.core.filters import Tag, Prefix
+from uni_tool.filters import Prefix, Tag
 from uni_tool.core.models import ToolMetadata
 
 
