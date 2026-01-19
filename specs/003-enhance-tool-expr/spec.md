@@ -63,7 +63,7 @@
 - **大小写敏感**: `name`、`prefix`、`tags` 以及标签匹配应区分大小写。
 - **解析失败**: Universe 接收字符串过滤条件解析失败时应抛出明确的解析错误。
 - **循环引用**: 虽然目前表达式是树状的，但需确保解析或组合不会导致栈溢出（深度过大）。
-- **特殊标签**: 标签中包含空格、特殊符号时的 DSL 处理（可能需要引号）。
+- **引号不支持**: 标签中包含空格、特殊符号一律非法，不提供引号转义或兼容路径。
 - **前缀简写**: 仅允许以 `^` 开头且以 `.*` 结尾的前缀简写（如 `^tool_.*`），除此之外仍视为非法字符。
 
 ## 需求
@@ -73,7 +73,7 @@
 - **FR-001**: 系统必须提供表达式解析器，支持逻辑运算符 `|` (OR), `&` (AND), `~` (NOT) 以及括号分组。
 - **FR-002**: 系统必须支持对表达式进行规范化和简化（如去重、扁平化）。
 - **FR-003**: 系统必须提供诊断接口，返回匹配结果及详细原因（Trace）。
-- **FR-004**: DSL 语法必须支持基本的标签引用，可能支持简单的通配符（如 `prefix:finance`, `name:check_balance`, `tags:(finance | ops)`）。其中 `name` 为名称精准匹配、`prefix` 为前缀匹配；如果只有`tags`时,  `tags:(finance | ops)` 等价于 `finance | ops`；否定写法支持 `~(finance | ops)` 与 `~tags:(finance | ops)`。
+- **FR-004**: DSL 语法必须支持基本的标签引用，不支持通配符；语法仅限 `prefix:finance`, `name:check_balance`, `tags:(finance | ops)`。其中 `name` 为名称精准匹配、`prefix` 为前缀匹配；如果只有`tags`时,  `tags:(finance | ops)` 等价于 `finance | ops`；否定写法支持 `~(finance | ops)` 与 `~tags:(finance | ops)`。
 - **FR-004a**: DSL 语法必须支持 `^tool_.*` 等价 `prefix:tool_`，以及 `` `tool_name` `` 等价 `name:tool_name` 的简写形式。
 - **FR-005**: Universe 必须支持直接接收字符串过滤条件，并将其解析为 DSL 表达式后进行过滤；仅允许符合 DSL 的字符串，否则抛出明确的解析错误。
 
