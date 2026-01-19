@@ -23,7 +23,7 @@ description: "功能实现任务列表"
 
 **目的**: 项目初始化和基本依赖准备
 
-- [ ] T001 在 `pyproject.toml` 与 `uv.lock` 中添加 `lark` 依赖(通过 `uv add lark`)
+- [X] T001 在 `pyproject.toml` 与 `uv.lock` 中添加 `lark` 依赖(通过 `uv add lark`)
 
 ---
 
@@ -33,8 +33,8 @@ description: "功能实现任务列表"
 
 **⚠️ 关键**: 在此阶段完成之前, 无法开始任何用户故事工作
 
-- [ ] T002 在 `uni_tool/core/expressions.py` 中扩展 `ToolExpression` 接口, 新增 `to_dsl()`/`diagnose()`/`simplify()` 抽象方法
-- [ ] T003 [P] 在 `uni_tool/core/errors.py` 中新增 `ExpressionParseError`, 用 Pydantic `BaseModel` 承载 `message/line/column/context`
+- [X] T002 在 `uni_tool/core/expressions.py` 中扩展 `ToolExpression` 接口, 新增 `to_dsl()`/`diagnose()`/`simplify()` 抽象方法
+- [X] T003 [P] 在 `uni_tool/core/errors.py` 中新增 `ExpressionParseError`, 用 Pydantic `BaseModel` 承载 `message/line/column/context`
 
 **检查点**: 基础就绪 - 现在可以开始并行实施用户故事
 
@@ -50,15 +50,15 @@ description: "功能实现任务列表"
 
 **注意: 先编写这些测试, 确保在实施前它们失败**
 
-- [ ] T004 [P] [US1] 在 `tests/unit/test_expression_parser.py` 中覆盖 DSL 解析/优先级/简写/非法标识符/非法 `^` 简写/深度过深/错误细节(line/column/context)
-- [ ] T005 [P] [US1] 在 `tests/unit/test_expression.py` 中验证 Universe 接收 DSL 字符串与表达式对象结果一致, 并校验大小写敏感匹配
+- [X] T004 [P] [US1] 在 `tests/unit/test_expression_parser.py` 中覆盖 DSL 解析/优先级/简写/非法标识符/非法 `^` 简写/深度过深/错误细节(line/column/context)
+- [X] T005 [P] [US1] 在 `tests/unit/test_expression.py` 中验证 Universe 接收 DSL 字符串与表达式对象结果一致, 并校验大小写敏感匹配
 
 ### 用户故事 1 的实施
 
-- [ ] T006 [US1] 在 `uni_tool/core/expression_parser.py` 中实现 Lark 语法、Transformer、标识符约束、`^tool_.*` 简写校验、深度限制与错误映射
-- [ ] T007 [US1] 在 `uni_tool/core/universe.py` 中让 `__getitem__` 解析 DSL 字符串并处理 `ExpressionParseError`
-- [ ] T008 [US1] 在 `uni_tool/core/expressions.py` 中实现 `And`/`Or`/`Not` 的 `to_dsl()`(含括号与优先级)
-- [ ] T009 [US1] 在 `uni_tool/filters/__init__.py` 中实现 `Tag`/`Prefix`/`ToolName` 的 `to_dsl()`
+- [X] T006 [US1] 在 `uni_tool/core/expression_parser.py` 中实现 Lark 语法、Transformer、标识符约束、`^tool_.*` 简写校验、深度限制与错误映射
+- [X] T007 [US1] 在 `uni_tool/core/universe.py` 中让 `__getitem__` 解析 DSL 字符串并处理 `ExpressionParseError`
+- [X] T008 [US1] 在 `uni_tool/core/expressions.py` 中实现 `And`/`Or`/`Not` 的 `to_dsl()`(含括号与优先级)
+- [X] T009 [US1] 在 `uni_tool/filters/__init__.py` 中实现 `Tag`/`Prefix`/`ToolName` 的 `to_dsl()`
 
 **检查点**: 此时, 用户故事 1 应该完全功能化且可独立测试
 
@@ -72,12 +72,12 @@ description: "功能实现任务列表"
 
 ### 用户故事 2 的测试 ⚠️
 
-- [ ] T010 [P] [US2] 在 `tests/unit/test_expression_trace.py` 中覆盖诊断路径与失败原因
+- [X] T010 [P] [US2] 在 `tests/unit/test_expression_trace.py` 中覆盖诊断路径与失败原因
 
 ### 用户故事 2 的实施
 
-- [ ] T011 [US2] 在 `uni_tool/core/expressions.py` 中定义 Pydantic `ExpressionTrace` 并实现组合表达式的 `diagnose()` 递归
-- [ ] T012 [US2] 在 `uni_tool/filters/__init__.py` 中实现 `Tag`/`Prefix`/`ToolName` 的 `diagnose()`
+- [X] T011 [US2] 在 `uni_tool/core/expressions.py` 中定义 Pydantic `ExpressionTrace` 并实现组合表达式的 `diagnose()` 递归
+- [X] T012 [US2] 在 `uni_tool/filters/__init__.py` 中实现 `Tag`/`Prefix`/`ToolName` 的 `diagnose()`
 
 **检查点**: 此时, 用户故事 1 和 2 都应该独立运行
 
@@ -91,12 +91,12 @@ description: "功能实现任务列表"
 
 ### 用户故事 3 的测试 ⚠️
 
-- [ ] T013 [P] [US3] 在 `tests/unit/test_expression.py` 中覆盖简化规则(去重/扁平化/双重否定)
+- [X] T013 [P] [US3] 在 `tests/unit/test_expression.py` 中覆盖简化规则(去重/扁平化/双重否定)
 
 ### 用户故事 3 的实施
 
-- [ ] T014 [US3] 在 `uni_tool/core/expressions.py` 中实现 `simplify()` 规则并保持语义等价
-- [ ] T015 [US3] 在 `uni_tool/filters/__init__.py` 中实现 `simplify()`(原子表达式返回自身)
+- [X] T014 [US3] 在 `uni_tool/core/expressions.py` 中实现 `simplify()` 规则并保持语义等价
+- [X] T015 [US3] 在 `uni_tool/filters/__init__.py` 中实现 `simplify()`(原子表达式返回自身)
 
 **检查点**: 所有用户故事现在应该独立功能化
 

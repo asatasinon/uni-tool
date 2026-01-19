@@ -30,7 +30,6 @@ from uni_tool.core.models import (
     ToolResult,
     ToolSet,
 )
-from uni_tool.filters import Tag
 
 if TYPE_CHECKING:
     from uni_tool.drivers.base import BaseDriver
@@ -177,22 +176,30 @@ class Universe:
 
     def __getitem__(self, key: str | ToolExpression) -> ToolSet:
         """
-        Filter tools by tag string or expression.
+        Filter tools by DSL string or expression.
 
         Args:
-            key: Either a tag string (str) or a ToolExpression.
-                - str: Treated as Tag filter, returns ToolSet with matching tools
-                - ToolExpression: Returns ToolSet with tools matching the expression
+            key: Either a DSL string (str) or a ToolExpression.
+                - str: Parsed as DSL expression, returns ToolSet with matching tools.
+                  DSL syntax: tags, prefix:, name:, ^prefix shorthand, `name` shorthand,
+                  operators: | (OR), & (AND), ~ (NOT), () for grouping.
+                - ToolExpression: Returns ToolSet with tools matching the expression.
 
         Returns:
             ToolSet containing matching tools (may be empty).
+
+        Raises:
+            ExpressionParseError: If the DSL string is invalid.
 
         Note:
             Use get(name) for accessing a single tool by name.
         """
         if isinstance(key, str):
-            # String is treated as Tag filter
-            expression = Tag(key)
+            # Parse DSL string into expression
+            from uni_tool.core.expression_parser import ExpressionParser
+
+            parser = ExpressionParser()
+            expression = parser.parse(key)
         elif isinstance(key, ToolExpression):
             expression = key
         else:

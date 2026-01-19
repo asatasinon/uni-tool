@@ -4,13 +4,24 @@ UniTools SDK - 渐进式披露 (Progressive Disclosure) 示例
 展示如何使用 SDK 实现层级式导航 (Hierarchical Navigation) 和复杂的权限控制。
 原理：
 1. 利用 tags 将工具分类 (root, finance, ops, admin, read, common)。
-2. 使用组合 Tag 表达式 (AND, OR, NOT) 定义复杂的上下文过滤规则。
+2. 使用 DSL 字符串表达式定义复杂的上下文过滤规则。
 3. 展示不同模式下的工具可见性差异。
+
+DSL 语法：
+- `|` : OR 运算符
+- `&` : AND 运算符
+- `~` : NOT 运算符
+- `()` : 分组
+- `tag:name` : 标签匹配 (可省略 tag: 前缀)
+- `prefix:xxx` : 名称前缀匹配
+- `name:xxx` : 名称精确匹配
+- `^xxx` : prefix:xxx 的简写
+- `` `xxx` `` : name:xxx 的简写
 """
 
 import asyncio
 
-from uni_tool import Tag, universe
+from uni_tool import universe
 
 # =============================================================================
 # 1. 定义状态管理 (模拟会话上下文)
@@ -20,26 +31,25 @@ from uni_tool import Tag, universe
 class SessionContext:
     def __init__(self):
         self.current_mode = "root"
-        # 预定义模式到过滤表达式的映射
+        # 预定义模式到 DSL 过滤表达式的映射
         # 演示复杂的过滤场景：
         # - 分级权限: finance_admin (可读写) vs finance_read (只读)
         # - 跨域组合: devops (ops + debug/admin)
         # - 公共工具: common 标签在多数模式下可见
-        self.mode_configs = {
+        self.mode_configs: dict[str, str] = {
             # Root 模式：只显示 root 导航和公共工具
-            "root": Tag("root") | Tag("common"),
+            "root": "root | common",
             # Finance Admin: 显示所有 finance 工具和公共工具
-            # 逻辑：(Tag("finance") | Tag("common"))
-            "finance_admin": Tag("finance") | Tag("common"),
+            "finance_admin": "finance | common",
             # Finance Read: 只显示 finance 且标记为 read 的工具，以及公共工具
-            # 逻辑：((Tag("finance") & Tag("read")) | Tag("common"))
-            "finance_read": (Tag("finance") & Tag("read")) | Tag("common"),
+            "finance_read": "(finance & read) | common",
             # Ops Safe: 显示 ops 且 read 的工具，排除 admin 工具（演示 NOT）
-            # 逻辑：((Tag("ops") & Tag("read") & ~Tag("admin")) | Tag("common"))
-            # 注意：这里 Tag("ops") & Tag("read") 已经限定了范围，再排除 admin 只是双重保险或用于演示
-            "ops_safe": (Tag("ops") & Tag("read") & ~Tag("admin")) | Tag("common"),
+            # 注意：ops & read 已经限定了范围，再排除 admin 只是双重保险或用于演示
+            "ops_safe": "(ops & read & ~admin) | common",
             # DevOps: 显示 ops 所有工具，加上 root 导航（方便切换）
-            "devops": Tag("ops") | Tag("root") | Tag("common"),
+            "devops": "ops | root | common",
+            # Navigation Only: 仅显示名称以 enter_ 开头的导航工具与公共工具（演示前缀匹配）
+            "nav_only": "^enter_ | common",
         }
 
     def set_mode(self, mode: str):
@@ -49,7 +59,8 @@ class SessionContext:
         self.current_mode = mode
 
     @property
-    def current_scenario(self):
+    def current_filter(self) -> str:
+        """返回当前模式的 DSL 过滤表达式."""
         return self.mode_configs[self.current_mode]
 
 
@@ -89,6 +100,13 @@ def enter_devops() -> str:
     """Enter DevOps mode (full ops access)."""
     context.set_mode("devops")
     return "Entered DevOps Mode."
+
+
+@universe.tool(tags={"root"})
+def enter_navigation_only() -> str:
+    """Enter navigation-only mode (prefix matching)."""
+    context.set_mode("nav_only")
+    return "Entered Navigation-Only Mode."
 
 
 # --- Finance 层级工具 ---
@@ -180,13 +198,21 @@ async def main():
         },
         # 5. 返回 Root
         {"tool_calls": [{"id": "call_4", "type": "function", "function": {"name": "back_to_root", "arguments": "{}"}}]},
-        # 6. 进入 DevOps 模式 (Full Ops)
-        {"tool_calls": [{"id": "call_5", "type": "function", "function": {"name": "enter_devops", "arguments": "{}"}}]},
-        # 7. 重启服务器 (允许)
+        # 6. 进入 Navigation Only 模式（演示前缀匹配）
+        {
+            "tool_calls": [
+                {"id": "call_5", "type": "function", "function": {"name": "enter_navigation_only", "arguments": "{}"}}
+            ]
+        },
+        # 7. 查看当前可见导航工具
+        "System: Inspect navigation-only tools",
+        # 8. 进入 DevOps 模式 (Full Ops)
+        {"tool_calls": [{"id": "call_6", "type": "function", "function": {"name": "enter_devops", "arguments": "{}"}}]},
+        # 9. 重启服务器 (允许)
         {
             "tool_calls": [
                 {
-                    "id": "call_6",
+                    "id": "call_7",
                     "type": "function",
                     "function": {"name": "restart_server", "arguments": '{"server_name": "prod-db"}'},
                 }
@@ -197,11 +223,12 @@ async def main():
     for step, request in enumerate(user_requests):
         print(f"\n--- Step {step + 1} ---")
 
-        # 1. 根据当前 mode 获取可见工具
-        current_scenario = context.current_scenario
-        visible_tools = universe[current_scenario].tools
+        # 1. 根据当前 mode 获取可见工具 (使用 DSL 字符串)
+        current_filter = context.current_filter
+        visible_tools = universe[current_filter].tools
 
         print(f"Current Context: [{context.current_mode}]")
+        print(f"Filter DSL: {current_filter}")
         print(f"Visible Tools: {[t.name for t in visible_tools]}")
 
         # 如果是字符串，仅打印模拟的用户意图
@@ -218,10 +245,11 @@ async def main():
                 id_to_name[call["id"]] = call["function"]["name"]
 
         # 3. 执行工具
-        # 关键：使用 tool_filter 进行运行时安全检查
+        # 关键：使用 DSL 表达式进行运行时安全检查
+        # universe[current_filter] 解析 DSL 字符串并返回 ToolSet
         results = await universe.dispatch(
             request,
-            tool_filter=current_scenario,
+            tool_filter=universe[current_filter].expression,
         )
 
         for r in results:

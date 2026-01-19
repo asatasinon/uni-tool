@@ -57,7 +57,7 @@
 - 基于 `__repr__` 输出（不保证 DSL 兼容）。
 
 ### 7. DSL 简写语法
-**Decision**: 支持 `^tool_.*` 作为 `prefix:tool_` 的简写，支持 `` `tool_name` `` 作为 `name:tool_name` 的简写。
+**Decision**: 支持 `^tool_` 作为 `prefix:tool_` 的简写，支持 `` `tool_name` `` 作为 `name:tool_name` 的简写。
 **Rationale**:
 - 降低配置心智负担，便于阅读与迁移旧规则。
 - 明确简写到核心语义的映射，便于解析器实现。

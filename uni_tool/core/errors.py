@@ -76,3 +76,25 @@ class ProtocolDetectionError(UniToolError):
 
     def __init__(self, message: str = "Unable to detect response protocol"):
         super().__init__(message)
+
+
+class ExpressionParseError(UniToolError):
+    """
+    Raised when DSL expression parsing fails.
+
+    Provides detailed error information including position and context.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        line: int,
+        column: int,
+        context: str,
+    ):
+        self.message = message
+        self.line = line
+        self.column = column
+        self.context = context
+        super().__init__(f"{message} at line {line}, column {column}: {context}")

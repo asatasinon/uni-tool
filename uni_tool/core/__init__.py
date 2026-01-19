@@ -2,6 +2,7 @@
 
 from uni_tool.core.errors import (
     DuplicateToolError,
+    ExpressionParseError,
     MiddlewareError,
     MissingContextKeyError,
     ProtocolDetectionError,
@@ -11,7 +12,7 @@ from uni_tool.core.errors import (
     UniToolError,
     UnsupportedResponseFormatError,
 )
-from uni_tool.core.expressions import And, Not, Or, ToolExpression
+from uni_tool.core.expressions import And, ExpressionTrace, Not, Or, ToolExpression
 from uni_tool.core.models import MiddlewareObj, ToolCall, ToolMetadata, ToolResult
 from uni_tool.filters import Prefix, Tag, ToolName
 
@@ -21,8 +22,9 @@ __all__ = [
     "ToolCall",
     "ToolMetadata",
     "ToolResult",
-    # Filters
+    # Expressions
     "ToolExpression",
+    "ExpressionTrace",
     "Tag",
     "Prefix",
     "And",
@@ -39,4 +41,5 @@ __all__ = [
     "MiddlewareError",
     "ToolFilterDeniedError",
     "ProtocolDetectionError",
+    "ExpressionParseError",
 ]

@@ -30,7 +30,7 @@
 | `parse(text)` | `ToolExpression` | 解析 DSL 字符串 |
 
 **语法简写**:
-- `^tool_.*` 等价于 `prefix:tool_`
+- `^tool_` 等价于 `prefix:tool_`
 - `` `tool_name` `` 等价于 `name:tool_name`
 
 ### 3. ExpressionTrace

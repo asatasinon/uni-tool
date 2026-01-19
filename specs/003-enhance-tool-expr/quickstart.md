@@ -58,6 +58,6 @@ if __name__ == "__main__":
 - `()`：分组
 - `name:tool_name`：工具名称精准匹配
 - `prefix:tool_`：名称前缀匹配
-- `^tool_.*`：等价于 `prefix:tool_`
+- `^tool_`：等价于 `prefix:tool_`
 - `` `tool_name` ``：等价于 `name:tool_name`
 - `tags:(finance | ops)`：标签表达式（与直接标签等价）

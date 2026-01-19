@@ -6,10 +6,15 @@ Tests cover:
 - Prefix filtering
 - Logical operations (And, Or, Not)
 - Combined expressions
+- Universe DSL string filtering
+- Case sensitivity
 """
 
-from uni_tool.filters import Prefix, Tag
+import pytest
+
+from uni_tool.filters import Prefix, Tag, ToolName
 from uni_tool.core.models import ToolMetadata
+from uni_tool.core.universe import Universe
 
 
 def create_mock_metadata(
@@ -249,3 +254,345 @@ class TestComplexExpressions:
 
         for metadata in [metadata1, metadata2, metadata3, metadata4]:
             assert expr1.matches(metadata) == expr2.matches(metadata)
+
+
+class TestUniverseDSLFiltering:
+    """Tests for Universe DSL string filtering."""
+
+    @pytest.fixture(autouse=True)
+    def setup_universe(self):
+        """Setup and teardown Universe for each test."""
+        self.universe = Universe()
+        yield
+        self.universe._reset()
+
+    def register_test_tools(self):
+        """Register test tools with various tags."""
+
+        @self.universe.tool(tags={"finance", "read"})
+        def get_balance(account_id: str) -> float:
+            return 100.0
+
+        @self.universe.tool(tags={"finance", "write"})
+        def transfer_funds(from_acc: str, to_acc: str, amount: float) -> bool:
+            return True
+
+        @self.universe.tool(tags={"admin"})
+        def admin_reset(target: str) -> str:
+            return "reset"
+
+        @self.universe.tool(tags={"deprecated"})
+        def old_function() -> None:
+            pass
+
+    def test_dsl_string_matches_expression_object(self):
+        """Test that DSL string produces same results as expression object."""
+        self.register_test_tools()
+
+        # Using expression object
+        expr = Tag("finance") & Tag("read")
+        result_obj = self.universe[expr]
+
+        # Using DSL string
+        result_dsl = self.universe["finance & read"]
+
+        # Should match same tools
+        obj_names = {t.name for t in result_obj.tools}
+        dsl_names = {t.name for t in result_dsl.tools}
+        assert obj_names == dsl_names
+        assert "get_balance" in obj_names
+
+    def test_dsl_string_or_expression(self):
+        """Test DSL string with OR expression."""
+        self.register_test_tools()
+
+        result = self.universe["finance | admin"]
+        names = {t.name for t in result.tools}
+
+        assert "get_balance" in names
+        assert "transfer_funds" in names
+        assert "admin_reset" in names
+
+    def test_dsl_string_not_expression(self):
+        """Test DSL string with NOT expression."""
+        self.register_test_tools()
+
+        result = self.universe["~deprecated"]
+        names = {t.name for t in result.tools}
+
+        assert "old_function" not in names
+        assert "get_balance" in names
+
+    def test_dsl_string_complex_expression(self):
+        """Test DSL string with complex expression."""
+        self.register_test_tools()
+
+        result = self.universe["(finance | admin) & ~deprecated"]
+        names = {t.name for t in result.tools}
+
+        assert "get_balance" in names
+        assert "transfer_funds" in names
+        assert "admin_reset" in names
+        assert "old_function" not in names
+
+    def test_case_sensitive_tag_matching(self):
+        """Test that tag matching is case-sensitive."""
+        self.universe._reset()
+
+        @self.universe.tool(tags={"Finance"})  # Capital F
+        def capitalized_tool() -> None:
+            pass
+
+        @self.universe.tool(tags={"finance"})  # Lowercase f
+        def lowercase_tool() -> None:
+            pass
+
+        # Exact case match
+        result_capital = self.universe["Finance"]
+        result_lower = self.universe["finance"]
+
+        capital_names = {t.name for t in result_capital.tools}
+        lower_names = {t.name for t in result_lower.tools}
+
+        assert "capitalized_tool" in capital_names
+        assert "lowercase_tool" not in capital_names
+        assert "lowercase_tool" in lower_names
+        assert "capitalized_tool" not in lower_names
+
+    def test_case_sensitive_prefix_matching(self):
+        """Test that prefix matching is case-sensitive."""
+        self.universe._reset()
+
+        @self.universe.tool()
+        def API_get_user() -> None:
+            pass
+
+        @self.universe.tool()
+        def api_get_user() -> None:
+            pass
+
+        result_upper = self.universe["prefix:API_"]
+        result_lower = self.universe["prefix:api_"]
+
+        upper_names = {t.name for t in result_upper.tools}
+        lower_names = {t.name for t in result_lower.tools}
+
+        assert "API_get_user" in upper_names
+        assert "api_get_user" not in upper_names
+        assert "api_get_user" in lower_names
+        assert "API_get_user" not in lower_names
+
+    def test_case_sensitive_name_matching(self):
+        """Test that name matching is case-sensitive."""
+        self.universe._reset()
+
+        @self.universe.tool()
+        def GetUser() -> None:
+            pass
+
+        @self.universe.tool()
+        def getuser() -> None:
+            pass
+
+        result_camel = self.universe["name:GetUser"]
+        result_lower = self.universe["name:getuser"]
+
+        camel_names = {t.name for t in result_camel.tools}
+        lower_names = {t.name for t in result_lower.tools}
+
+        assert "GetUser" in camel_names
+        assert "getuser" not in camel_names
+        assert "getuser" in lower_names
+        assert "GetUser" not in lower_names
+
+    def test_empty_result_for_no_match(self):
+        """Test that non-matching DSL returns empty ToolSet."""
+        self.register_test_tools()
+
+        result = self.universe["nonexistent_tag"]
+        assert len(result.tools) == 0
+
+    def test_dsl_prefix_shorthand(self):
+        """Test ^prefix shorthand syntax."""
+        self.universe._reset()
+
+        @self.universe.tool()
+        def api_get_user() -> None:
+            pass
+
+        @self.universe.tool()
+        def api_list_users() -> None:
+            pass
+
+        @self.universe.tool()
+        def internal_func() -> None:
+            pass
+
+        result = self.universe["^api_"]
+        names = {t.name for t in result.tools}
+
+        assert "api_get_user" in names
+        assert "api_list_users" in names
+        assert "internal_func" not in names
+
+    def test_dsl_name_shorthand(self):
+        """Test `name` backtick shorthand syntax."""
+        self.universe._reset()
+
+        @self.universe.tool()
+        def specific_tool() -> None:
+            pass
+
+        @self.universe.tool()
+        def another_tool() -> None:
+            pass
+
+        result = self.universe["`specific_tool`"]
+        names = {t.name for t in result.tools}
+
+        assert "specific_tool" in names
+        assert "another_tool" not in names
+
+
+class TestExpressionSimplify:
+    """Tests for expression simplification rules."""
+
+    def test_simplify_atomic_returns_self(self):
+        """Test that atomic expressions return themselves."""
+        tag = Tag("finance")
+        prefix = Prefix("api_")
+        name = ToolName("get_user")
+
+        assert tag.simplify() is tag
+        assert prefix.simplify() is prefix
+        assert name.simplify() is name
+
+    def test_simplify_double_negation(self):
+        """Test double negation elimination: ~~A -> A."""
+        expr = ~(~Tag("finance"))
+        simplified = expr.simplify()
+
+        assert isinstance(simplified, Tag)
+        assert simplified.name == "finance"
+
+    def test_simplify_triple_negation(self):
+        """Test triple negation simplification: ~~~A -> ~A."""
+        expr = ~(~(~Tag("finance")))
+        simplified = expr.simplify()
+
+        # ~~~A should become ~A
+        assert isinstance(simplified, type(~Tag("x")))  # Not
+        inner = simplified.expr
+        assert isinstance(inner, Tag)
+        assert inner.name == "finance"
+
+    def test_simplify_and_deduplication(self):
+        """Test AND deduplication: A & A -> A."""
+        expr = Tag("finance") & Tag("finance")
+        simplified = expr.simplify()
+
+        # Should simplify to just Tag("finance")
+        assert isinstance(simplified, Tag)
+        assert simplified.name == "finance"
+
+    def test_simplify_or_deduplication(self):
+        """Test OR deduplication: A | A -> A."""
+        expr = Tag("finance") | Tag("finance")
+        simplified = expr.simplify()
+
+        # Should simplify to just Tag("finance")
+        assert isinstance(simplified, Tag)
+        assert simplified.name == "finance"
+
+    def test_simplify_and_flattening(self):
+        """Test AND flattening: (A & B) & C -> flat structure."""
+        expr = (Tag("a") & Tag("b")) & Tag("c")
+        simplified = expr.simplify()
+
+        # Result should be a flattened And chain
+        # We can verify by checking the DSL representation
+        dsl = simplified.to_dsl()
+        assert "a" in dsl
+        assert "b" in dsl
+        assert "c" in dsl
+
+    def test_simplify_or_flattening(self):
+        """Test OR flattening: (A | B) | C -> flat structure."""
+        expr = (Tag("a") | Tag("b")) | Tag("c")
+        simplified = expr.simplify()
+
+        # Result should be a flattened Or chain
+        dsl = simplified.to_dsl()
+        assert "a" in dsl
+        assert "b" in dsl
+        assert "c" in dsl
+
+    def test_simplify_preserves_semantics(self):
+        """Test that simplification preserves semantic equivalence."""
+        metadata_a = ToolMetadata(
+            name="tool",
+            description="Test",
+            func=lambda: None,
+            tags={"a"},
+        )
+        metadata_ab = ToolMetadata(
+            name="tool",
+            description="Test",
+            func=lambda: None,
+            tags={"a", "b"},
+        )
+        metadata_empty = ToolMetadata(
+            name="tool",
+            description="Test",
+            func=lambda: None,
+            tags=set(),
+        )
+
+        # Test double negation
+        expr1 = ~(~Tag("a"))
+        simplified1 = expr1.simplify()
+        assert expr1.matches(metadata_a) == simplified1.matches(metadata_a)
+        assert expr1.matches(metadata_empty) == simplified1.matches(metadata_empty)
+
+        # Test deduplication
+        expr2 = Tag("a") & Tag("a")
+        simplified2 = expr2.simplify()
+        assert expr2.matches(metadata_a) == simplified2.matches(metadata_a)
+        assert expr2.matches(metadata_empty) == simplified2.matches(metadata_empty)
+
+        # Test complex expression
+        expr3 = (Tag("a") | Tag("a")) & Tag("b")
+        simplified3 = expr3.simplify()
+        assert expr3.matches(metadata_ab) == simplified3.matches(metadata_ab)
+        assert expr3.matches(metadata_a) == simplified3.matches(metadata_a)
+
+    def test_simplify_complex_expression(self):
+        """Test simplification of complex expressions."""
+        # (A | A) & (B | B) should simplify to A & B
+        expr = (Tag("a") | Tag("a")) & (Tag("b") | Tag("b"))
+        simplified = expr.simplify()
+
+        # Verify simplification occurred
+        dsl = simplified.to_dsl()
+        # Should not have duplicate operands
+        assert dsl.count("a") == 1 or "a & b" in dsl or "b & a" in dsl
+
+    def test_simplify_mixed_dedup_and_negation(self):
+        """Test simplification with both deduplication and negation."""
+        # ~~A & A should simplify to A & A -> A
+        expr = ~(~Tag("a")) & Tag("a")
+        simplified = expr.simplify()
+
+        # After double negation elimination and deduplication
+        # Should be just Tag("a")
+        assert isinstance(simplified, Tag)
+        assert simplified.name == "a"
+
+    def test_simplify_idempotent(self):
+        """Test that simplification is idempotent."""
+        expr = (Tag("a") | Tag("a")) & ~(~Tag("b"))
+        simplified_once = expr.simplify()
+        simplified_twice = simplified_once.simplify()
+
+        # Simplifying twice should give same result
+        assert simplified_once.to_dsl() == simplified_twice.to_dsl()
