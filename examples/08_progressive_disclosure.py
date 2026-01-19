@@ -1,11 +1,11 @@
 """
 UniTools SDK - 渐进式披露 (Progressive Disclosure) 示例
 
-展示如何使用 SDK 实现层级式导航 (Hierarchical Navigation)。
+展示如何使用 SDK 实现层级式导航 (Hierarchical Navigation) 和复杂的权限控制。
 原理：
-1. 利用 tags 将工具分类 (root, finance, ops)。
-2. 根据当前上下文动态过滤展示给 LLM 的工具。
-3. 通过调用导航工具切换上下文。
+1. 利用 tags 将工具分类 (root, finance, ops, admin, read, common)。
+2. 使用组合 Tag 表达式 (AND, OR, NOT) 定义复杂的上下文过滤规则。
+3. 展示不同模式下的工具可见性差异。
 """
 
 import asyncio
@@ -20,10 +20,37 @@ from uni_tool import Tag, universe
 class SessionContext:
     def __init__(self):
         self.current_mode = "root"
+        # 预定义模式到过滤表达式的映射
+        # 演示复杂的过滤场景：
+        # - 分级权限: finance_admin (可读写) vs finance_read (只读)
+        # - 跨域组合: devops (ops + debug/admin)
+        # - 公共工具: common 标签在多数模式下可见
+        self.mode_configs = {
+            # Root 模式：只显示 root 导航和公共工具
+            "root": Tag("root") | Tag("common"),
+            # Finance Admin: 显示所有 finance 工具和公共工具
+            # 逻辑：(Tag("finance") | Tag("common"))
+            "finance_admin": Tag("finance") | Tag("common"),
+            # Finance Read: 只显示 finance 且标记为 read 的工具，以及公共工具
+            # 逻辑：((Tag("finance") & Tag("read")) | Tag("common"))
+            "finance_read": (Tag("finance") & Tag("read")) | Tag("common"),
+            # Ops Safe: 显示 ops 且 read 的工具，排除 admin 工具（演示 NOT）
+            # 逻辑：((Tag("ops") & Tag("read") & ~Tag("admin")) | Tag("common"))
+            # 注意：这里 Tag("ops") & Tag("read") 已经限定了范围，再排除 admin 只是双重保险或用于演示
+            "ops_safe": (Tag("ops") & Tag("read") & ~Tag("admin")) | Tag("common"),
+            # DevOps: 显示 ops 所有工具，加上 root 导航（方便切换）
+            "devops": Tag("ops") | Tag("root") | Tag("common"),
+        }
 
     def set_mode(self, mode: str):
+        if mode not in self.mode_configs:
+            raise ValueError(f"Unknown mode: {mode}")
         print(f"\n[System] Switching context: {self.current_mode} -> {mode}")
         self.current_mode = mode
+
+    @property
+    def current_scenario(self):
+        return self.mode_configs[self.current_mode]
 
 
 # 全局上下文实例
@@ -37,81 +64,77 @@ context = SessionContext()
 
 
 @universe.tool(tags={"root"})
-def enter_finance_mode() -> str:
-    """Enter finance mode to access financial tools.
-
-    Use this when user asks for money transfer, balance check, etc.
-    """
-    context.set_mode("finance")
-    return "Entered finance mode. You can now use financial tools."
+def enter_finance_admin() -> str:
+    """Enter finance admin mode (full access)."""
+    context.set_mode("finance_admin")
+    return "Entered Finance Admin Mode."
 
 
 @universe.tool(tags={"root"})
-def enter_ops_mode() -> str:
-    """Enter operations mode to access server management tools.
+def enter_finance_read() -> str:
+    """Enter finance read-only mode."""
+    context.set_mode("finance_read")
+    return "Entered Finance Read-Only Mode."
 
-    Use this when user asks for server restart, logs, etc.
-    """
-    context.set_mode("ops")
-    return "Entered operations mode. You can now use operations tools."
+
+@universe.tool(tags={"root"})
+def enter_ops_safe() -> str:
+    """Enter safe operations mode."""
+    context.set_mode("ops_safe")
+    return "Entered Ops Safe Mode."
+
+
+@universe.tool(tags={"root"})
+def enter_devops() -> str:
+    """Enter DevOps mode (full ops access)."""
+    context.set_mode("devops")
+    return "Entered DevOps Mode."
 
 
 # --- Finance 层级工具 ---
 
 
-@universe.tool(tags={"finance"})
+@universe.tool(tags={"finance", "read"})
 def check_balance(account_id: str) -> str:
-    """Check account balance.
-
-    Args:
-        account_id: The account ID to check.
-    """
+    """Check account balance (Read-Only)."""
     return f"Balance for {account_id}: $1,000,000"
 
 
-@universe.tool(tags={"finance"})
+@universe.tool(tags={"finance", "admin"})
 def transfer_money(to_account: str, amount: float) -> str:
-    """Transfer money to another account.
-
-    Args:
-        to_account: The recipient account ID.
-        amount: Amount to transfer.
-    """
+    """Transfer money (Admin only)."""
     return f"Transferred ${amount} to {to_account}."
 
 
 # --- Ops 层级工具 ---
 
 
-@universe.tool(tags={"ops"})
+@universe.tool(tags={"ops", "admin"})
 def restart_server(server_name: str) -> str:
-    """Restart a specific server.
-
-    Args:
-        server_name: Name of the server to restart.
-    """
+    """Restart a specific server (Admin only)."""
     return f"Server {server_name} is restarting..."
 
 
-@universe.tool(tags={"ops"})
+@universe.tool(tags={"ops", "read"})
 def check_logs(server_name: str, lines: int = 10) -> str:
-    """Check server logs.
-
-    Args:
-        server_name: Name of the server.
-        lines: Number of lines to read.
-    """
+    """Check server logs (Read-Only)."""
     return f"Last {lines} lines of logs from {server_name}..."
 
 
-# --- 通用导航工具 ---
+# --- Common 工具 ---
 
 
-@universe.tool(tags={"finance", "ops"})
-def back_to_main_menu() -> str:
-    """Return to the main menu (root)."""
+@universe.tool(tags={"common"})
+def help() -> str:
+    """Get help information."""
+    return "Available commands depend on your current mode."
+
+
+@universe.tool(tags={"common"})
+def back_to_root() -> str:
+    """Return to root menu."""
     context.set_mode("root")
-    return "Returned to main menu."
+    return "Returned to root menu."
 
 
 # =============================================================================
@@ -121,20 +144,20 @@ def back_to_main_menu() -> str:
 
 async def main():
     print("=" * 60)
-    print("UniTools SDK - Hierarchical Navigation Demo")
+    print("UniTools SDK - Advanced Progressive Disclosure Demo")
     print("=" * 60)
 
     # 模拟用户的一系列请求
     user_requests = [
         # 1. 初始状态 (root)
         "System: Start",
-        # 2. 用户想转账 -> LLM 应该调用 enter_finance_mode
+        # 2. 进入 Finance Read-Only 模式
         {
             "tool_calls": [
-                {"id": "call_1", "type": "function", "function": {"name": "enter_finance_mode", "arguments": "{}"}}
+                {"id": "call_1", "type": "function", "function": {"name": "enter_finance_read", "arguments": "{}"}}
             ]
         },
-        # 3. 进入 finance 模式后 -> LLM 调用 check_balance
+        # 3. 尝试查询余额 (允许)
         {
             "tool_calls": [
                 {
@@ -144,18 +167,29 @@ async def main():
                 }
             ]
         },
-        # 4. 用户想重启服务器 -> LLM 需要先退出或直接切换?
-        # 在这个简单模型中，通常需要先返回 root 或直接允许切换（取决于 Tag 设计）。
-        # 这里演示先返回 root。
+        # 4. 尝试转账 (应该失败，因为当前模式是 finance_read)
+        # 注意：正常情况下 LLM 不会看到这个工具，但如果它产生幻觉强行调用，tool_filter 应该拦截它
         {
             "tool_calls": [
-                {"id": "call_3", "type": "function", "function": {"name": "back_to_main_menu", "arguments": "{}"}}
+                {
+                    "id": "call_3",
+                    "type": "function",
+                    "function": {"name": "transfer_money", "arguments": '{"to_account": "bob", "amount": 100}'},
+                }
             ]
         },
-        # 5. 回到 root -> 进入 ops
+        # 5. 返回 Root
+        {"tool_calls": [{"id": "call_4", "type": "function", "function": {"name": "back_to_root", "arguments": "{}"}}]},
+        # 6. 进入 DevOps 模式 (Full Ops)
+        {"tool_calls": [{"id": "call_5", "type": "function", "function": {"name": "enter_devops", "arguments": "{}"}}]},
+        # 7. 重启服务器 (允许)
         {
             "tool_calls": [
-                {"id": "call_4", "type": "function", "function": {"name": "enter_ops_mode", "arguments": "{}"}}
+                {
+                    "id": "call_6",
+                    "type": "function",
+                    "function": {"name": "restart_server", "arguments": '{"server_name": "prod-db"}'},
+                }
             ]
         },
     ]
@@ -164,8 +198,8 @@ async def main():
         print(f"\n--- Step {step + 1} ---")
 
         # 1. 根据当前 mode 获取可见工具
-        current_tag = Tag(context.current_mode)
-        visible_tools = universe[current_tag].tools
+        current_scenario = context.current_scenario
+        visible_tools = universe[current_scenario].tools
 
         print(f"Current Context: [{context.current_mode}]")
         print(f"Visible Tools: {[t.name for t in visible_tools]}")
@@ -175,32 +209,28 @@ async def main():
             print(f"User Input: {request}")
             continue
 
-        # 2. 模拟 LLM 处理 (这里直接使用预定义的 tool_calls)
+        # 2. 模拟 LLM 处理
         print("LLM simulates tool call...")
 
-        # 建立 ID 到函数名的映射，以便后续打印
         id_to_name = {}
         if isinstance(request, dict) and "tool_calls" in request:
             for call in request["tool_calls"]:
                 id_to_name[call["id"]] = call["function"]["name"]
 
         # 3. 执行工具
-        # 注意：在实际应用中，这里应该将 visible_tools 渲染给 LLM
-        # universe[current_tag].render("openai")
-
-        # 安全检查：确保 LLM 调用的工具在当前上下文是允许的
-        # 使用 dispatch 的 tool_filter 参数进行运行时强制检查
+        # 关键：使用 tool_filter 进行运行时安全检查
         results = await universe.dispatch(
             request,
-            tool_filter=current_tag,  # 关键：强制只允许调用当前 tag 下的工具
+            tool_filter=current_scenario,
         )
 
         for r in results:
-            status = "SUCCESS" if r.is_success else "FAILED"
+            status = "SUCCESS" if r.is_success else "DENIED/FAILED"
             func_name = id_to_name.get(r.id, "Unknown")
             print(f"Execution: {func_name} -> {status}")
-            print(f"Result: {r.result}")
-            if not r.is_success:
+            if r.is_success:
+                print(f"Result: {r.result}")
+            else:
                 print(f"Error: {r.error}")
 
 
