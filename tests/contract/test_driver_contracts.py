@@ -13,6 +13,9 @@ from pydantic import BaseModel
 from uni_tool.drivers.base import BaseDriver
 from uni_tool.drivers.openai import OpenAIDriver
 from uni_tool.drivers.anthropic import AnthropicDriver
+from uni_tool.drivers.deepseek import DeepSeekDriver
+from uni_tool.drivers.gemini import GeminiDriver
+from uni_tool.drivers.glm import GLMDriver
 from uni_tool.drivers.xml import XMLDriver
 from uni_tool.drivers.markdown import MarkdownDriver
 from uni_tool.core.models import ToolMetadata, ToolCall, ModelProfile
@@ -187,6 +190,131 @@ class TestAnthropicDriverContract:
         assert score == 100
 
 
+class TestGeminiDriverContract:
+    """Contract tests for Gemini driver."""
+
+    @pytest.fixture
+    def driver(self) -> GeminiDriver:
+        return GeminiDriver()
+
+    def test_implements_base_driver(self, driver: GeminiDriver):
+        """Test that driver implements BaseDriver interface."""
+        assert isinstance(driver, BaseDriver)
+
+    def test_render_returns_list(self, driver: GeminiDriver):
+        """Test that render returns a list."""
+        tools = create_sample_tools()
+        result = driver.render(tools)
+        assert isinstance(result, list)
+
+    def test_render_output_structure(self, driver: GeminiDriver):
+        """Test that render output has correct structure."""
+        tools = create_sample_tools()
+        result = driver.render(tools)
+
+        for item in result:
+            assert "type" in item
+            assert item["type"] == "function"
+            assert "name" in item
+            assert "description" in item
+            assert "parameters" in item
+
+    def test_parse_returns_tool_calls(self, driver: GeminiDriver):
+        """Test that parse returns list of ToolCall."""
+        response = {
+            "function_calls": [
+                {
+                    "id": "gemini_call_001",
+                    "name": "search",
+                    "args": {"query": "test"},
+                }
+            ]
+        }
+        result = driver.parse(response)
+        assert isinstance(result, list)
+        assert all(isinstance(tc, ToolCall) for tc in result)
+
+    def test_can_handle_gemini_models(self, driver: GeminiDriver):
+        """Test can_handle scores Gemini models highly."""
+        profile = ModelProfile(name="gemini-2.5-flash", capabilities={"FC_NATIVE"})
+        score = driver.can_handle(profile)
+        assert score == 100
+
+    def test_can_handle_response_gemini_format(self, driver: GeminiDriver):
+        """Test can_handle_response recognizes Gemini format."""
+        response = {
+            "candidates": [{"content": {"parts": [{"functionCall": {"name": "search", "args": {"query": "test"}}}]}}]
+        }
+        score = driver.can_handle_response(response)
+        assert score == 100
+
+
+class TestDeepSeekDriverContract:
+    """Contract tests for DeepSeek driver."""
+
+    @pytest.fixture
+    def driver(self) -> DeepSeekDriver:
+        return DeepSeekDriver()
+
+    def test_implements_base_driver(self, driver: DeepSeekDriver):
+        """Test that driver implements BaseDriver interface."""
+        assert isinstance(driver, BaseDriver)
+
+    def test_parse_returns_tool_calls(self, driver: DeepSeekDriver):
+        """Test that parse returns list of ToolCall."""
+        response = {
+            "tool_calls": [
+                {
+                    "id": "call_001",
+                    "type": "function",
+                    "function": {"name": "search", "arguments": '{"query": "test"}'},
+                }
+            ]
+        }
+        result = driver.parse(response)
+        assert isinstance(result, list)
+        assert all(isinstance(tc, ToolCall) for tc in result)
+
+    def test_can_handle_deepseek_models(self, driver: DeepSeekDriver):
+        """Test can_handle scores DeepSeek models highly."""
+        profile = ModelProfile(name="deepseek-chat", capabilities={"FC_NATIVE"})
+        score = driver.can_handle(profile)
+        assert score == 100
+
+
+class TestGLMDriverContract:
+    """Contract tests for GLM driver."""
+
+    @pytest.fixture
+    def driver(self) -> GLMDriver:
+        return GLMDriver()
+
+    def test_implements_base_driver(self, driver: GLMDriver):
+        """Test that driver implements BaseDriver interface."""
+        assert isinstance(driver, BaseDriver)
+
+    def test_parse_returns_tool_calls(self, driver: GLMDriver):
+        """Test that parse returns list of ToolCall."""
+        response = {
+            "tool_calls": [
+                {
+                    "id": "call_001",
+                    "type": "function",
+                    "function": {"name": "search", "arguments": '{"query": "test"}'},
+                }
+            ]
+        }
+        result = driver.parse(response)
+        assert isinstance(result, list)
+        assert all(isinstance(tc, ToolCall) for tc in result)
+
+    def test_can_handle_glm_models(self, driver: GLMDriver):
+        """Test can_handle scores GLM models highly."""
+        profile = ModelProfile(name="glm-4.5", capabilities={"FC_NATIVE"})
+        score = driver.can_handle(profile)
+        assert score == 100
+
+
 class TestXMLDriverContract:
     """Contract tests for XML driver."""
 
@@ -299,6 +427,9 @@ class TestDriverConsistency:
         return {
             "openai": OpenAIDriver(),
             "anthropic": AnthropicDriver(),
+            "gemini": GeminiDriver(),
+            "deepseek": DeepSeekDriver(),
+            "glm": GLMDriver(),
             "xml": XMLDriver(),
             "markdown": MarkdownDriver(),
         }

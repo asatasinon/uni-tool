@@ -54,10 +54,13 @@ from uni_tool.drivers.anthropic import AnthropicDriver
 
 # Drivers
 from uni_tool.drivers.base import BaseDriver
+from uni_tool.drivers.deepseek import DeepSeekDriver
+from uni_tool.drivers.gemini import GeminiDriver
+from uni_tool.drivers.glm import GLMDriver
 from uni_tool.drivers.markdown import MarkdownDriver
 from uni_tool.drivers.openai import OpenAIDriver
 from uni_tool.drivers.xml import XMLDriver
-from uni_tool.filters import Prefix, Tag, ToolFilter, ToolName
+from uni_tool.filters import Prefix, Tag, ToolName
 from uni_tool.middlewares.audit import AuditMiddleware, create_audit_middleware
 
 # Middlewares
@@ -72,6 +75,9 @@ from uni_tool.utils.injection import Injected
 universe = Universe()
 universe.register_driver("openai", OpenAIDriver())
 universe.register_driver("anthropic", AnthropicDriver())
+universe.register_driver("gemini", GeminiDriver())
+universe.register_driver("deepseek", DeepSeekDriver())
+universe.register_driver("glm", GLMDriver())
 universe.register_driver("xml", XMLDriver())
 universe.register_driver("markdown", MarkdownDriver())
 
@@ -96,13 +102,15 @@ __all__ = [
     "Or",
     "Not",
     "ToolName",
-    "ToolFilter",
     # Dependency injection
     "Injected",
     # Drivers
     "BaseDriver",
     "OpenAIDriver",
     "AnthropicDriver",
+    "GeminiDriver",
+    "DeepSeekDriver",
+    "GLMDriver",
     "XMLDriver",
     "MarkdownDriver",
     # Middlewares
@@ -126,4 +134,4 @@ __all__ = [
     "ProtocolDetectionError",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"

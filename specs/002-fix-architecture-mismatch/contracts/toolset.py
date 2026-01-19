@@ -18,9 +18,6 @@ class ToolName:
         raise NotImplementedError
 
 
-ToolFilter = ToolExpression | None
-
-
 @dataclass(frozen=True)
 class ToolSet:
     tools: list[ToolMetadata]

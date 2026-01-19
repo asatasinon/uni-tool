@@ -13,7 +13,7 @@
 | `expression` | `Optional[ToolExpression]` | 当前筛选表达式（来自 `Tag/Prefix/And/Or/Not`） |
 | `drivers` | `Dict[str, BaseDriver]` | 可用协议驱动池（用于渲染协商） |
 
-### 2. ToolFilter (调度过滤规则)
+### 2. ToolExpression (调度过滤规则)
 `dispatch` 的安全过滤规则。
 
 | 形式 | 类型 | 描述 |
@@ -63,7 +63,7 @@
 ## 关系与约束
 
 - `ToolSet.tools` 来自 `Universe` 注册表，必须保持与 `ToolExpression` 的匹配一致性。
-- `ToolFilter` 对 `ToolCall.name` 进行过滤，不匹配时返回错误 `ToolResult` 且不执行；工具名过滤通过 `ToolName(ToolExpression)` 表达。
+- `ToolExpression` 对 `ToolCall.name` 进行过滤，不匹配时返回错误 `ToolResult` 且不执行；工具名过滤通过 `ToolName(ToolExpression)` 表达。
 - `ModelProfile` 仅用于驱动协商，不参与执行流水线。
 - `MiddlewareObj.uid` 必须稳定，缺省情况下由类名/函数名生成。
 

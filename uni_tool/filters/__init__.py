@@ -59,6 +59,3 @@ class ToolName(ToolExpression):
 
     def __repr__(self) -> str:
         return f"ToolName({self.name!r})"
-
-
-ToolFilter = ToolExpression | None

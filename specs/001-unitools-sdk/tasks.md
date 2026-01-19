@@ -90,7 +90,7 @@ graph TD
 - `u[Tag('a')]` 能筛选出正确工具。
 - `OpenAIDriver.render` 生成正确的 JSON Schema。
 
-- [X] T020 [US3] 在 `uni_tool/core/models.py` 实现 `ToolExpression`, `Tag`, `Prefix` 及其逻辑运算
+- [X] T020 [US3] 在 `uni_tool/core/expressions.py` 实现 `ToolExpression` 及逻辑运算，并在 `uni_tool/filters/__init__.py` 实现 `Tag`/`Prefix`
 - [X] T021 [US3] 在 `uni_tool/drivers/base.py` 定义 `BaseDriver` 抽象基类
 - [X] T022 [US3] 在 `uni_tool/drivers/openai.py` 实现 `OpenAIDriver` (render & parse)
 - [X] T023 [US3] 在 `uni_tool/core/universe.py` 集成 `ToolExpression` 支持 (`__getitem__`) 和 Driver 选择

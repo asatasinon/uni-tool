@@ -80,6 +80,10 @@ class Universe:
             "claude-3-sonnet": "anthropic",
             "claude-3-haiku": "anthropic",
             "claude-3.5-sonnet": "anthropic",
+            "gemini-2.5-flash": "gemini",
+            "gemini-3-flash-preview": "gemini",
+            "deepseek-chat": "deepseek",
+            "glm-4.5": "glm",
         }
 
         # Model capability profiles
@@ -92,6 +96,10 @@ class Universe:
             "claude-3-sonnet": ModelProfile(name="claude-3-sonnet", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
             "claude-3-haiku": ModelProfile(name="claude-3-haiku", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
             "claude-3.5-sonnet": ModelProfile(name="claude-3.5-sonnet", capabilities={"FC_NATIVE", "XML_FALLBACK"}),
+            "gemini-2.5-flash": ModelProfile(name="gemini-2.5-flash", capabilities={"FC_NATIVE"}),
+            "gemini-3-flash-preview": ModelProfile(name="gemini-3-flash-preview", capabilities={"FC_NATIVE"}),
+            "deepseek-chat": ModelProfile(name="deepseek-chat", capabilities={"FC_NATIVE"}),
+            "glm-4.5": ModelProfile(name="glm-4.5", capabilities={"FC_NATIVE"}),
         }
 
     def register(self, metadata: ToolMetadata) -> None:

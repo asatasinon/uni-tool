@@ -40,7 +40,7 @@
 
 **⚠️ 关键**: 在此阶段完成之前, 无法开始任何用户故事工作
 
-- [X] T003 在 `uni_tool/core/models.py` 实现 `ToolName` 表达式与 `ToolFilter` 类型别名
+- [X] T003 在 `uni_tool/core/expressions.py` 实现 `ToolExpression`/`And`/`Or`/`Not`，并在 `uni_tool/filters/__init__.py` 实现 `Tag`/`Prefix`/`ToolName`
 - [X] T004 在 `uni_tool/core/models.py` 与 `uni_tool/middlewares/base.py` 调整 `MiddlewareObj.uid` 默认生成规则为类名/函数名稳定值
 - [X] T005 在 `uni_tool/core/universe.py` 增加驱动评分选择的内部工具函数, 供 `render/dispatch` 共用
 
@@ -73,7 +73,7 @@
 
 ### 用户故事 2 的实施
 
-- [X] T010 [US2] 在 `uni_tool/core/universe.py` 的 `dispatch` 增加 `tool_filter` 参数并应用 `ToolFilter`
+- [X] T010 [US2] 在 `uni_tool/core/universe.py` 的 `dispatch` 增加 `tool_filter` 参数并应用 `ToolExpression`
 - [X] T011 [US2] 在 `uni_tool/core/universe.py` 支持未指定协议时基于 `can_handle_response` 自动识别, 识别失败返回错误结果但不中断调度
 - [X] T012 [P] [US2] 在 `uni_tool/drivers/openai.py` 实现 `can_handle`/`can_handle_response` 并对齐 `parse` 输出结构
 - [X] T013 [P] [US2] 在 `uni_tool/drivers/anthropic.py` 新增驱动实现 `render/parse/can_handle/can_handle_response`
