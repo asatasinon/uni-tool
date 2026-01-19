@@ -42,7 +42,7 @@ uv run pytest
 ### 核心工作流
 
 1.  **工具表达式开发 (Tool Expression)**:
-    *   专注于 `uni_tool/core/execution.py` 和相关逻辑。
+    *   专注于 `uni_tool/core/expressions.py` 和相关逻辑。
     *   使用 `uv run pytest tests/unit/test_expression.py` 验证更改。
 
 2.  **中间件开发 (Middleware)**:
