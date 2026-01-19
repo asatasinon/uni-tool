@@ -22,3 +22,9 @@ tests/
 
 <!-- 手动添加内容开始 -->
 <!-- 手动添加内容结束 -->
+
+## Active Technologies
+- Python 3.13+ + pydantic>=2.10.0, docstring-parser>=0.17.0, lark (003-enhance-tool-expr)
+
+## Recent Changes
+- 003-enhance-tool-expr: Added Python 3.13+ + pydantic>=2.10.0, docstring-parser>=0.17.0, lark
