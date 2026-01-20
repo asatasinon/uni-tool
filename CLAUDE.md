@@ -12,7 +12,18 @@ source .venv/bin/activate
 
 # run script
 uv run <script>
+
+# build package
+uv build
 ```
+
+## Project Structure
+
+*   **`uni_tool/core`**: Core logic (Universe, Expressions, Execution). Decoupled from specific LLMs.
+*   **`uni_tool/drivers`**: Protocol adapters (OpenAI, Anthropic, etc.).
+*   **`uni_tool/middlewares`**: Cross-cutting concerns (Audit, Monitor, etc.).
+*   **`specs/`**: Feature specifications (Spec -> Plan -> Tasks -> Impl).
+*   **`examples/`**: Usage examples.
 
 ## Development Guidelines (from Constitution)
 
@@ -42,6 +53,13 @@ uv run pytest tests/unit/test_expression.py
 # Test middleware logic
 uv run pytest tests/unit/test_middleware.py
 ```
+
+## Release Workflow
+
+1.  Ensure all tests pass: `uv run pytest`
+2.  Update version in `pyproject.toml`
+3.  Build package: `uv build`
+4.  (Optional) Publish: `uv publish`
 
 ## Technical Context
 
